@@ -1,18 +1,8 @@
 # Scientific Method for AI-Assisted Work
 
 A reusable structure for validating what an AI agent produces, and for
-making the rules about *how* it works actually stick — instead of living
+making the rules about *how* it works actually stick, instead of living
 only as good intentions in a document nobody reread at the right moment.
-
-This came out of a real production incident: a cold-outreach system where
-an LLM generated customer-facing messages sent to real people. Without
-validation, it shipped 57 messages with an unresolved placeholder and dozens
-with a broken reply address. The fix that held was not "write a better
-prompt" — it was a method for validating output before scaling, plus a
-structural distinction, documented in `method/ENFORCEMENT_MODEL.md`, about
-why a documented rule and an enforced rule are not the same thing. This
-repository is that method and that structure, generalized and stripped of
-anything project- or company-specific.
 
 ## Structure
 
@@ -58,6 +48,3 @@ delivery closes the "nobody chose to read it" gap. It does not close the
 "read it and didn't act on it" gap. Only Layer 3, and an honest audit
 against what actually happened, closes that one.
 
-## License
-
-MIT — see [`LICENSE`](LICENSE).
