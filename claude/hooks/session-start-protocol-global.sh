@@ -46,4 +46,7 @@ if [ -f "$PROJECT_PROTOCOL" ]; then
 $(cat "$PROJECT_PROTOCOL")"
 fi
 
-jq -n --arg ctx "$CONTEXT" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}'
+# Use stdin instead of --arg to avoid ARG_MAX overflow on large protocols
+# (e.g. a project SCIENTIFIC_PROTOCOL.md can be >700KB, exceeding the OS
+# argument limit when passed via jq --arg "$CONTEXT").
+printf '%s' "$CONTEXT" | jq -R -n --rawfile ctx /dev/stdin '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}'
