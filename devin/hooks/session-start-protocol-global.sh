@@ -38,10 +38,21 @@ done
 
 PROJECT_PROTOCOL="$CWD/SCIENTIFIC_PROTOCOL.md"
 if [ -f "$PROJECT_PROTOCOL" ]; then
-  CONTEXT="$CONTEXT
+  PROTO_SIZE=$(wc -c < "$PROJECT_PROTOCOL")
+  PROTO_CAP=51200  # 50KB — larger protocols bloat context/token cost
+  if [ "$PROTO_SIZE" -gt "$PROTO_CAP" ]; then
+    CONTEXT="$CONTEXT
+
+=== $PROJECT_PROTOCOL ===
+[TRUNCATED — file is ${PROTO_SIZE} bytes, capped at ${PROTO_CAP}. Read the full file with the read tool.]
+$(head -c "$PROTO_CAP" "$PROJECT_PROTOCOL")
+[... TRUNCATED — read $PROJECT_PROTOCOL for the full content]"
+  else
+    CONTEXT="$CONTEXT
 
 === $PROJECT_PROTOCOL ===
 $(cat "$PROJECT_PROTOCOL")"
+  fi
 fi
 
 # Use stdin instead of --arg to avoid ARG_MAX overflow on large protocols

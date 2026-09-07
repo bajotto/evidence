@@ -34,10 +34,26 @@ for doc in SCIENTIFIC_METHOD.md ENFORCEMENT_MODEL.md; do
   fi
 done
 
-# 2. Copy the hook script
+# 2. Copy the hook script and supporting scripts
 cp "$SCRIPT_DIR/hooks/session-start-protocol-global.sh" "$HOOKS_DIR/session-start-protocol-global.sh"
 chmod +x "$HOOKS_DIR/session-start-protocol-global.sh"
 echo "OK  $HOOKS_DIR/session-start-protocol-global.sh"
+
+# 2a. Copy the Windsurf rules sync script (derives Windsurf rule files from
+#     the canonical MDs hourly via cron, keeping the two enforcement systems
+#     in sync). Optional — only relevant if you also use Windsurf/Cascade.
+if [ -f "$SCRIPT_DIR/hooks/sync-windsurf-rules.sh" ]; then
+  cp "$SCRIPT_DIR/hooks/sync-windsurf-rules.sh" "$HOOKS_DIR/sync-windsurf-rules.sh"
+  chmod +x "$HOOKS_DIR/sync-windsurf-rules.sh"
+  echo "OK  $HOOKS_DIR/sync-windsurf-rules.sh (run hourly via cron to sync Windsurf rules)"
+fi
+
+# 2b. Copy the test script
+if [ -f "$SCRIPT_DIR/hooks/test-hooks.sh" ]; then
+  cp "$SCRIPT_DIR/hooks/test-hooks.sh" "$HOOKS_DIR/test-hooks.sh"
+  chmod +x "$HOOKS_DIR/test-hooks.sh"
+  echo "OK  $HOOKS_DIR/test-hooks.sh (run: bash $HOOKS_DIR/test-hooks.sh)"
+fi
 
 # 3. Merge into settings.json — preserves everything already there (theme,
 #    other hooks, etc). Idempotent: running twice does not duplicate the
