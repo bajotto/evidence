@@ -44,21 +44,22 @@ $(cat "$f")"
 done
 
 PROJECT_PROTOCOL="$CWD/SCIENTIFIC_PROTOCOL.md"
+HEADER_SCRIPT="$CLAUDE_DIR/hooks/protocol-header.sh"
 if [ -f "$PROJECT_PROTOCOL" ]; then
-  PROTO_SIZE=$(wc -c < "$PROJECT_PROTOCOL")
-  PROTO_CAP=51200  # 50KB — larger protocols bloat context/token cost
-  if [ "$PROTO_SIZE" -gt "$PROTO_CAP" ]; then
+  if [ -x "$HEADER_SCRIPT" ]; then
+    "$HEADER_SCRIPT" sync "$PROJECT_PROTOCOL" >/dev/null 2>&1 || true
+    PROTOCOL_HEADER=$("$HEADER_SCRIPT" emit "$PROJECT_PROTOCOL" 2>/dev/null || true)
+  fi
+  if [ -n "${PROTOCOL_HEADER:-}" ]; then
     CONTEXT="$CONTEXT
 
-=== $PROJECT_PROTOCOL ===
-[TRUNCATED — file is ${PROTO_SIZE} bytes, capped at ${PROTO_CAP}. Read the full file with the read tool.]
-$(head -c "$PROTO_CAP" "$PROJECT_PROTOCOL")
-[... TRUNCATED — read $PROJECT_PROTOCOL for the full content]"
+=== CURRENT PROTOCOL HEADER (authoritative; full history at $PROJECT_PROTOCOL) ===
+$PROTOCOL_HEADER"
   else
     CONTEXT="$CONTEXT
 
-=== $PROJECT_PROTOCOL ===
-$(cat "$PROJECT_PROTOCOL")"
+=== CURRENT PROTOCOL ===
+Header unavailable; read the full file with the read tool: $PROJECT_PROTOCOL"
   fi
 fi
 

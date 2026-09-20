@@ -21,7 +21,8 @@ devin/     Implementation for Devin: a global SessionStart hook and
 
 1. Read [`method/SCIENTIFIC_METHOD.md`](method/SCIENTIFIC_METHOD.md) — how
    to validate what your AI-driven system produces, in phases, with
-   explicit acceptance criteria.
+   explicit acceptance criteria. Its `PROTOCOL-HEADER` rule keeps current
+   phase, gates, and a body index readable even when protocol history is huge.
 2. Read [`method/ENFORCEMENT_MODEL.md`](method/ENFORCEMENT_MODEL.md) — why
    a rule being *written down* doesn't mean it will be *followed*, and the
    three layers (text, forced delivery, code enforcement) that close that

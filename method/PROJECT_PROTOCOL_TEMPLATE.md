@@ -6,6 +6,44 @@ memory for future sessions — an AI agent (or a teammate) should be able to
 read this file alone and understand what has been validated, what failed,
 and what is still open.
 
+<!-- PROTOCOL-HEADER:START -->
+# PROTOCOL HEADER — READ FIRST
+
+This block is generated from the protocol body and injected at session start and on every prompt. It is the authoritative current-state summary, not a replacement for the full history below.
+
+**Project:** [project name]
+**Current phase:** [phase number]
+**Last updated (body):** [YYYY-MM-DD]
+**Current status (body):** [one line — current phase and what's blocking the next one]
+
+## How to use this protocol
+1. Treat every claim as H0 (failure mode) vs H1 (expected result).
+2. Require a measurable acceptance criterion and record each case pass/fail.
+3. Work in order: Discovery → Pilot (3–5 real cases) → approval → Scale → Monitor.
+4. Never scale on a partial pilot; document failures and evidence.
+5. Read the full body before acting; this header does not replace history.
+
+## Phase index (details are in the full body)
+- Phase 1 — Discovery (see the Phase 1 section below)
+- Phase 2 — Pilot (see the Phase 2 section below)
+- Phase 3 — Scale (see the Phase 3 section below)
+- Phase 4 — Monitor (see the Phase 4 section below)
+
+## Non-negotiable gates
+- Phase 1 is read-only discovery; Phase 2 tests 3–5 real cases.
+- Phase 2 must be 100% pass and explicitly approved before Phase 3.
+- Phase 3 is measured from the real system; Phase 4 monitors outcomes.
+- Do not claim production confirmation without running the confirming query.
+
+## Body index
+- Testable hypotheses and acceptance criteria — see section 1.
+- Phases and phase results — see section 2.
+- Incident log and lessons — see section 3.
+- Next-session checklist — see section 4.
+
+**Next action:** read the body, verify current phase/status, then state the session start before acting.
+<!-- PROTOCOL-HEADER:END -->
+
 **Last updated:** [YYYY-MM-DD]
 **Status:** [one line — current phase and what's blocking the next one]
 

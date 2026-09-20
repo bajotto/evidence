@@ -19,6 +19,7 @@ SCIENTIFIC_METHOD="$CANONICAL_DIR/SCIENTIFIC_METHOD.md"
 README_SESSIONS="$CANONICAL_DIR/README_SESSIONS.md"
 ENFORCEMENT="$CANONICAL_DIR/ENFORCEMENT_CHECKLIST.md"
 LOG_FILE="$CANONICAL_DIR/hooks/sync-windsurf-rules.log"
+HEADER_SCRIPT="$CANONICAL_DIR/hooks/protocol-header.sh"
 
 # Rotate log if > 1MB (cron appends indefinitely otherwise)
 if [ -f "$LOG_FILE" ] && [ "$(wc -c < "$LOG_FILE")" -gt 1048576 ]; then
@@ -125,9 +126,12 @@ generate_project() {
     return 0
   fi
 
-  # Extract current status line from the protocol
-  local status_line
-  status_line=$(grep -m1 '^\*\*Status:' "$protocol" 2>/dev/null || echo "(see SCIENTIFIC_PROTOCOL.md)")
+  # Keep the compact current-state summary authoritative before generating rules.
+  if [ -x "$HEADER_SCRIPT" ]; then
+    "$HEADER_SCRIPT" sync "$protocol" >/dev/null 2>&1 || true
+  fi
+  local protocol_header
+  protocol_header=$("$HEADER_SCRIPT" emit "$protocol" 2>/dev/null || echo "(header unavailable; read SCIENTIFIC_PROTOCOL.md)")
 
   local tmp
   tmp=$(mktemp)
@@ -150,8 +154,9 @@ generate_project() {
     echo "   - $ENFORCEMENT"
     echo "3. State before any other action:"
     echo "   \"Session start: $(basename "$project_path"), Phase [N], [Status]\""
-    echo "   Current protocol status: $status_line"
-    echo "   Verify the current phase from the protocol file — do not trust this rule or memory."
+    echo "   Current protocol header (authoritative):"
+    printf '%s\n' "$protocol_header"
+    echo "   Verify the current phase from the full protocol file — do not trust this rule or memory."
     echo ""
     echo "## Phase gates (every non-trivial action >5 min)"
     extract_section "$SCIENTIFIC_METHOD" "### 3. Execute in small, approved phases"

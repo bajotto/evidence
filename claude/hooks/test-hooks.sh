@@ -83,21 +83,50 @@ case "$CONTEXT" in
   *) fail "session-start missing SCIENTIFIC_METHOD.md injection";;
 esac
 
-# --- 6. session-start-protocol-global.sh: truncates large protocols (Issue 5) ---
-# large-project has a 746KB protocol — should be truncated
-JOBS_JSON=$(echo '{"cwd":"/path/to/project"}' | bash "$SESSION_START" 2>/dev/null)
-JOBS_CONTEXT=$(echo "$JOBS_JSON" | jq -r '.hookSpecificOutput.additionalContext')
-JOBS_SIZE=$(echo -n "$JOBS_CONTEXT" | wc -c)
-case "$JOBS_CONTEXT" in
-  *TRUNCATED*) [ "$JOBS_SIZE" -lt 120000 ] \
-    && pass "large protocol truncated (${JOBS_SIZE} bytes, has TRUNCATED marker)" \
-    || fail "truncation marker present but size ${JOBS_SIZE} too large";;
-  *) [ -f /path/to/project/SCIENTIFIC_PROTOCOL.md ] \
-    && fail "large protocol not truncated (${JOBS_SIZE} bytes, no marker)" \
-    || pass "no large-project protocol to test truncation (skipped)";;
+# --- 6. protocol-header.sh: generates a bounded, readable, indexed header ---
+HEADER="$HOOKS_DIR/protocol-header.sh"
+FIXTURE=$(mktemp)
+cp /path/to/project/SCIENTIFIC_PROTOCOL.md "$FIXTURE"
+BEFORE=$(sha256sum "$FIXTURE" | cut -d' ' -f1)
+bash "$HEADER" sync "$FIXTURE" >/dev/null 2>&1 && pass "header sync succeeds" || fail "header sync failed"
+bash "$HEADER" check "$FIXTURE" >/dev/null 2>&1 && pass "header check succeeds" || fail "header check failed"
+grep -q '## Phase index' "$FIXTURE" && pass "header has phase index" || fail "header missing phase index"
+grep -q '## Body index' "$FIXTURE" && pass "header has body index" || fail "header missing body index"
+AFTER=$(sha256sum "$FIXTURE" | cut -d' ' -f1)
+bash "$HEADER" sync "$FIXTURE" >/dev/null 2>&1
+AFTER2=$(sha256sum "$FIXTURE" | cut -d' ' -f1)
+[ "$AFTER" = "$AFTER2" ] && pass "header sync is idempotent" || fail "header sync is not idempotent"
+rm -f "$FIXTURE"
+
+# --- 7. protocol-header.sh: injects current state on every prompt ---
+PROMPT_JSON=$(printf '%s' '{"cwd":"/path/to/project","hook_event_name":"UserPromptSubmit"}' | bash "$HEADER" hook 2>/dev/null)
+PROMPT_CONTEXT=$(echo "$PROMPT_JSON" | jq -r '.hookSpecificOutput.additionalContext')
+echo "$PROMPT_JSON" | jq -e '.hookSpecificOutput.hookEventName == "UserPromptSubmit"' >/dev/null 2>&1 \
+  && pass "UserPromptSubmit produces valid hook output" || fail "UserPromptSubmit output invalid"
+case "$PROMPT_CONTEXT" in
+  *'Current status (body)'*'## Phase index'*) pass "prompt injection contains current status and phase index";;
+  *) fail "prompt injection missing current status or phase index";;
 esac
 
-# --- 7. session-start-protocol-global.sh: uses mktemp, not hardcoded /tmp path (Issue 4) ---
+# --- 8. protocol-header.sh: PostToolUse auto-syncs protocol edits ---
+POST_FIXTURE=$(mktemp)
+cp /path/to/project/SCIENTIFIC_PROTOCOL.md "$POST_FIXTURE"
+rm -f "$POST_FIXTURE.tmp"
+printf '%s' "{\"cwd\":\"/tmp\",\"hook_event_name\":\"PostToolUse\",\"tool_name\":\"edit\",\"tool_input\":{\"file_path\":\"$POST_FIXTURE\"}}" | bash "$HEADER" hook >/dev/null 2>&1
+bash "$HEADER" check "$POST_FIXTURE" >/dev/null 2>&1 && pass "PostToolUse keeps edited protocol valid" || fail "PostToolUse did not validate protocol"
+rm -f "$POST_FIXTURE"
+
+# --- 9. session-start-protocol-global.sh: current header replaces body cap ---
+JOBS_JSON=$(echo '{"cwd":"/path/to/project"}' | bash "$SESSION_START" 2>/dev/null)
+JOBS_CONTEXT=$(echo "$JOBS_JSON" | jq -r '.hookSpecificOutput.additionalContext')
+case "$JOBS_CONTEXT" in
+  *'CURRENT PROTOCOL HEADER'*'## Phase index'*) pass "SessionStart injects readable header for large protocol";;
+  *) fail "SessionStart missing readable header for large protocol";;
+esac
+JOBS_SIZE=$(echo -n "$JOBS_CONTEXT" | wc -c)
+[ "$JOBS_SIZE" -lt 30000 ] && pass "SessionStart context is bounded (${JOBS_SIZE} bytes)" || fail "SessionStart context unexpectedly large (${JOBS_SIZE} bytes)"
+
+# --- 10. session-start-protocol-global.sh: uses mktemp, not hardcoded /tmp path (Issue 4) ---
 assert_not_contains "$SESSION_START" '/tmp/session-state.err' "no hardcoded /tmp/session-state.err path"
 assert_contains "$SESSION_START" 'mktemp' "uses mktemp for state error file"
 

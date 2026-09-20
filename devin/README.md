@@ -36,6 +36,15 @@ to behave like Layer 2 (forced delivery) instead of Layer 1 (text someone
 has to invoke). The template file has this correct; if you write your own
 from scratch, don't skip it.
 
+The hook injects the required method documents and the project's bounded
+`PROTOCOL-HEADER`. The header contains current phase/status, the phase and body
+indexes, and the non-negotiable gates; the full protocol remains available for
+history and evidence. It also injects `ENFORCEMENT_CHECKLIST.md` and
+`README_SESSIONS.md` when those optional operational documents are present in
+the installed Devin document directory. `UserPromptSubmit` re-injects and
+validates the header on every prompt, while `PostToolUse` repairs it after
+protocol edits.
+
 ## Setup
 
 **Global (Layer 2 — the method itself, every project on this machine):**
@@ -46,8 +55,10 @@ from scratch, don't skip it.
 
 Installs the hook the same way [`../claude/install.sh`](../claude/install.sh)
 does for Claude Code: copies the method docs, installs the hook script,
-merges the hook registration into `~/.devin/hooks.v1.json` (preserving
-anything already there, idempotent).
+and merges the hook registration into `~/.devin/hooks.v1.json` (preserving
+anything already there, idempotent). If `ENFORCEMENT_CHECKLIST.md` or
+`README_SESSIONS.md` are also present in `method/`, they are installed and
+injected as optional operational context too.
 
 **Per-project (critical rules specific to one codebase):**
 

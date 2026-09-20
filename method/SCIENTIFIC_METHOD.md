@@ -16,6 +16,30 @@ not a testable proposition — there is no way to check it against anything.
 100% of history, not a sample" is testable. Restate assumptions this way
 before acting on them.
 
+## Information-preservation rule: inject the HEADER, preserve the history
+
+A protocol can exceed an agent context cap without losing its most important
+current state. Every `SCIENTIFIC_PROTOCOL.md` must therefore begin with a
+small, readable `PROTOCOL-HEADER` generated from the body. The header is the
+first context delivered at session start and on every prompt; the full body
+remains the source of history, evidence, incidents, and detailed phase notes.
+
+The header must accurately contain, at minimum:
+
+- current phase, current status, and body update date;
+- a short H0/H1 and measurable-acceptance-criteria reminder;
+- an ordered phase index with body line references or an explicit search
+  pointer when the history is too large to list completely;
+- the non-negotiable pilot/approval/scale gates; and
+- an index pointing to hypotheses, phases, incidents, and the next-session
+  checklist in the full body.
+
+The header is not hand-maintained. A checker must reject missing, duplicated,
+oversized, or incomplete headers. Session and prompt hooks must regenerate and
+validate it after protocol edits, including edits made through opaque shell
+commands. A passing header proves accurate delivery of current state; it does
+not prove that the agent followed the method.
+
 ## The method
 
 ### 1. State a falsifiable hypothesis

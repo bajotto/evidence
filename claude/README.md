@@ -21,6 +21,11 @@ context before it takes any action. It also auto-detects and injects a
 project's own `SCIENTIFIC_PROTOCOL.md` if one exists at the project root,
 with no per-project setup.
 
+The hook injects only the bounded `PROTOCOL-HEADER` for the project protocol,
+not an arbitrary head slice of its history. The header carries current phase,
+status, phase/body indexes, and the approval gates; the full protocol remains
+available for detailed evidence.
+
 Install it:
 
 ```bash

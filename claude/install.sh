@@ -34,10 +34,12 @@ for doc in SCIENTIFIC_METHOD.md ENFORCEMENT_MODEL.md; do
   fi
 done
 
-# 2. Copy the hook script and supporting scripts
-cp "$SCRIPT_DIR/hooks/session-start-protocol-global.sh" "$HOOKS_DIR/session-start-protocol-global.sh"
-chmod +x "$HOOKS_DIR/session-start-protocol-global.sh"
-echo "OK  $HOOKS_DIR/session-start-protocol-global.sh"
+# 2. Copy the hook scripts and supporting scripts
+for script in session-start-protocol-global.sh protocol-header.sh; do
+  cp "$SCRIPT_DIR/hooks/$script" "$HOOKS_DIR/$script"
+  chmod +x "$HOOKS_DIR/$script"
+  echo "OK  $HOOKS_DIR/$script"
+done
 
 # 2a. Copy the Windsurf rules sync script (derives Windsurf rule files from
 #     the canonical MDs hourly via cron, keeping the two enforcement systems
@@ -84,7 +86,19 @@ jq --arg cmd "$HOOK_CMD" '
   )
 ' "$SETTINGS" > "$TMP"
 mv "$TMP" "$SETTINGS"
-echo "OK  $SETTINGS (hook registered, rest of the file preserved)"
+
+PROMPT_CMD="bash $HOOKS_DIR/protocol-header.sh hook"
+POST_CMD="$PROMPT_CMD"
+TMP="$(mktemp)"
+jq --arg prompt "$PROMPT_CMD" --arg post "$POST_CMD" '
+  .hooks //= {} |
+  .hooks.UserPromptSubmit //= [] |
+  (if ([.hooks.UserPromptSubmit[].hooks[]?.command] | index($prompt)) then . else .hooks.UserPromptSubmit += [{hooks: [{type: "command", command: $prompt, timeout: 15}]}] end) |
+  .hooks.PostToolUse //= [] |
+  (if ([.hooks.PostToolUse[].hooks[]?.command] | index($post)) then . else .hooks.PostToolUse += [{matcher: "", hooks: [{type: "command", command: $post, timeout: 15}]}] end)
+' "$SETTINGS" > "$TMP"
+mv "$TMP" "$SETTINGS"
+echo "OK  $SETTINGS (SessionStart, UserPromptSubmit, and PostToolUse hooks registered)"
 
 echo
 echo "Done. Open Claude Code in ANY project on this machine to confirm — the"
