@@ -68,6 +68,32 @@ Layers 1 and 2 can; it has to be built into the system it protects.
 - **Fails when:** it hasn't been built yet — i.e., the rule is still only
   living in Layer 1 or Layer 2.
 
+## Layer 2 fails silently by default
+
+A delivery mechanism can be installed, enabled, firing on every session — and
+still deliver nothing. Two real defects in this repository's own hook, both
+found in production use on 2026-09-22, had that shape:
+
+- The hook resolved the project protocol as `$CWD/SCIENTIFIC_PROTOCOL.md`, with
+  no walk up the tree. Sessions that started in a subdirectory of the repo got
+  no protocol. The `[ -f ]` test simply failed and the hook moved on.
+- `protocol-header.sh` drained stdin unconditionally, so it blocked whenever a
+  caller left the pipe open. Under the hook's `timeout`, wrapped in `|| true`,
+  a timed-out header sync was indistinguishable from a successful one.
+
+Neither produced an error, a warning or a log line. The agent could not report
+the gap, because from inside the session nothing was missing — the protocol had
+simply never been mentioned. The failure surfaced only when a human asked
+whether the work had been recorded, and the answer was no.
+
+The lesson generalises past these two bugs: **an enforcement mechanism that can
+fail open, and says nothing when it does, degrades to Layer 1 without telling
+anyone.** It still appears in the settings file, still shows up in code review,
+still gets described as "we have a hook for that." When designing Layer 2, make
+the negative case loud: if the artifact that was supposed to be injected could
+not be found, inject that fact instead of staying quiet, and test the
+not-found path as deliberately as the happy path.
+
 ## Using this model
 
 Stack all three; don't substitute one for another. For every rule you care

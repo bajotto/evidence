@@ -142,5 +142,61 @@ assert_contains "$SYNC" 'extract_section' "uses extract_section (not broken extr
 assert_not_contains "$SYNC" 'extract_h2' "no leftover extract_h2 references"
 
 echo ""
+# --- N. Protocol discovered from a subdirectory (regression) ---
+# The hook used to resolve the protocol as "$CWD/SCIENTIFIC_PROTOCOL.md" with no
+# walk up the tree. A session started in any subdirectory of the repo (server/,
+# web/, a monorepo package) got no protocol at all — and got it silently, so the
+# session ran with no phase, status or open hypotheses.
+PROTO_TMP="$(mktemp -d)"
+mkdir -p "$PROTO_TMP/proj/a/b"
+cp "$HOOKS_DIR/../../method/PROJECT_PROTOCOL_TEMPLATE.md" "$PROTO_TMP/proj/SCIENTIFIC_PROTOCOL.md" 2>/dev/null \
+  || printf '# SCIENTIFIC_PROTOCOL\n\n**Status:** test\n\n## 3. PHASES\n\nPhase 1.\n' > "$PROTO_TMP/proj/SCIENTIFIC_PROTOCOL.md"
+
+for depth in "proj" "proj/a" "proj/a/b"; do
+  OUT=$(cd "$PROTO_TMP/$depth" && echo '{}' | timeout 20 bash "$SESSION_START" 2>/dev/null)
+  echo "$OUT" | grep -q "CURRENT PROTOCOL" \
+    && pass "protocol found from $depth" \
+    || fail "protocol NOT found from $depth (subdirectory regression)"
+done
+
+# Deepest match wins: a nested protocol must override its parent's.
+printf '# nested\n\n**Status:** nested\n' > "$PROTO_TMP/proj/a/SCIENTIFIC_PROTOCOL.md"
+OUT=$(cd "$PROTO_TMP/proj/a/b" && echo '{}' | timeout 20 bash "$SESSION_START" 2>/dev/null)
+echo "$OUT" | grep -q "proj/a/SCIENTIFIC_PROTOCOL.md" \
+  && pass "nearest protocol wins over an ancestor's" \
+  || fail "nearest protocol did not win over an ancestor's"
+
+# Outside any project it must not invent one.
+OUT=$(cd "$PROTO_TMP" && echo '{}' | timeout 20 bash "$SESSION_START" 2>/dev/null)
+echo "$OUT" | grep -q "CURRENT PROTOCOL" \
+  && fail "claimed a protocol outside any project" \
+  || pass "no protocol claimed outside a project"
+
+# --- N+1. protocol-header.sh must not block on stdin (regression) ---
+# Line 1 read stdin unconditionally via $(cat), but only hook mode (no
+# subcommand) is ever fed JSON there. Any caller that left the pipe open — a
+# terminal, or a hook without </dev/null — hung the process until its timeout,
+# and the hook swallows that with "|| true", so the header silently went stale.
+HDR="$HOOKS_DIR/protocol-header.sh"
+for cmd in emit check sync; do
+  timeout 8 bash "$HDR" "$cmd" "$PROTO_TMP/proj/SCIENTIFIC_PROTOCOL.md" < <(sleep 20) >/dev/null 2>&1
+  RC=$?
+  [ "$RC" -ne 124 ] \
+    && pass "protocol-header.sh $cmd does not block on an open stdin" \
+    || fail "protocol-header.sh $cmd hung on an open stdin (rc=124)"
+done
+
+# Hook mode (no subcommand) must still read its JSON payload from stdin.
+echo '{"hook_event_name":"SessionStart"}' | timeout 8 bash "$HDR" >/dev/null 2>&1
+[ $? -ne 124 ] && pass "protocol-header.sh hook mode still reads stdin" \
+               || fail "protocol-header.sh hook mode broke on stdin"
+
+# --- N+2. method/ copy is executable (README tells you to start there) ---
+[ -x "$HOOKS_DIR/../../method/protocol-header.sh" ] \
+  && pass "method/protocol-header.sh is executable" \
+  || fail "method/protocol-header.sh is not executable"
+
+rm -rf "$PROTO_TMP"
+
 echo "Results: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1

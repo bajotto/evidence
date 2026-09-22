@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 # Keep the small, authoritative protocol header current and inject it safely.
 set -euo pipefail
-INPUT_JSON="$(cat 2>/dev/null || true)"
+# Only hook mode (no subcommand) is fed JSON on stdin. The CLI subcommands are
+# not, and draining stdin there hangs the process whenever the caller leaves the
+# pipe open — which is what a terminal, or a hook that forgot </dev/null, does.
+case "${1:-}" in
+  sync|check|emit) INPUT_JSON="" ;;
+  *)               INPUT_JSON="$(cat 2>/dev/null || true)" ;;
+esac
 export INPUT_JSON
 python3 - "$@" <<'PY'
 import contextlib

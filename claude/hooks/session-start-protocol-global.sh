@@ -43,12 +43,29 @@ $(cat "$f")"
   fi
 done
 
-PROJECT_PROTOCOL="$CWD/SCIENTIFIC_PROTOCOL.md"
+# Walk up from the session's directory: a session very often starts in a
+# subdirectory of the repo (monorepo package, server/, web/), while the
+# protocol lives at the root. Checking only "$CWD" missed it there, and missed
+# it silently — the session then ran with no phase, status or open hypotheses.
+# Deepest match wins, so a nested protocol still overrides its parent's.
+find_project_protocol() {
+  _d="$1"
+  while [ -n "$_d" ] && [ "$_d" != "/" ]; do
+    if [ -f "$_d/SCIENTIFIC_PROTOCOL.md" ]; then
+      printf '%s\n' "$_d/SCIENTIFIC_PROTOCOL.md"
+      return 0
+    fi
+    _d="$(dirname "$_d")"
+  done
+  [ -f "/SCIENTIFIC_PROTOCOL.md" ] && printf '%s\n' "/SCIENTIFIC_PROTOCOL.md" && return 0
+  return 1
+}
+PROJECT_PROTOCOL="$(find_project_protocol "$CWD" || true)"
 HEADER_SCRIPT="$CLAUDE_DIR/hooks/protocol-header.sh"
 if [ -f "$PROJECT_PROTOCOL" ]; then
   if [ -x "$HEADER_SCRIPT" ]; then
-    "$HEADER_SCRIPT" sync "$PROJECT_PROTOCOL" >/dev/null 2>&1 || true
-    PROTOCOL_HEADER=$("$HEADER_SCRIPT" emit "$PROJECT_PROTOCOL" 2>/dev/null || true)
+    "$HEADER_SCRIPT" sync "$PROJECT_PROTOCOL" </dev/null >/dev/null 2>&1 || true
+    PROTOCOL_HEADER=$("$HEADER_SCRIPT" emit "$PROJECT_PROTOCOL" </dev/null 2>/dev/null || true)
   fi
   if [ -n "${PROTOCOL_HEADER:-}" ]; then
     CONTEXT="$CONTEXT
