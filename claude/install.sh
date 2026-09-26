@@ -41,6 +41,15 @@ for script in session-start-protocol-global.sh protocol-header.sh; do
   echo "OK  $HOOKS_DIR/$script"
 done
 
+# 2a2. Copy protocol-search.sh next to protocol-header.sh — the header it
+#      generates tells the agent to run "protocol-search.sh ..." and that
+#      only resolves if the two scripts live in the same directory.
+if [ -f "$METHOD_DIR/protocol-search.sh" ]; then
+  cp "$METHOD_DIR/protocol-search.sh" "$HOOKS_DIR/protocol-search.sh"
+  chmod +x "$HOOKS_DIR/protocol-search.sh"
+  echo "OK  $HOOKS_DIR/protocol-search.sh"
+fi
+
 # 2a. Copy the Windsurf rules sync script (derives Windsurf rule files from
 #     the canonical MDs hourly via cron, keeping the two enforcement systems
 #     in sync). Optional — only relevant if you also use Windsurf/Cascade.

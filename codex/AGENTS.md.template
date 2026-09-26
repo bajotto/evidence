@@ -1,0 +1,53 @@
+<!--
+  Template AGENTS.md for OpenAI Codex CLI (and any other AGENTS.md-compatible
+  tool — Cursor and Trae also read this file; see ../cursor/ and ../trae/).
+
+  Confirmed for Codex CLI 0.157.1 by actually running it (`codex debug
+  prompt-input`), not assumed from docs alone — see README.md in this folder
+  for what that test showed, including one requirement that isn't obvious
+  from the public docs: Codex only injects AGENTS.md for a project marked
+  "trusted" in ~/.codex/config.toml. An untrusted project gets none of this
+  file's content, silently — no error, no warning.
+
+  Delete this comment block once you've filled in the sections below.
+-->
+
+# [PROJECT_NAME]
+
+## Critical rules
+
+The rules below caused, or nearly caused, a real incident in this project.
+Full detail: `SCIENTIFIC_PROTOCOL.md`.
+
+1. **[Your highest-cost failure mode].** [What to do instead, and why.]
+2. **[Second rule, if you have one].** [Same structure.]
+3. **Before claiming "X is confirmed" or "X is in production," verify the
+   real system state** — a git push, a passing test, or a code comment is
+   not confirmation.
+
+## What this project does
+
+[Short description.]
+
+## Build / test / run
+
+[Exact commands — this is the part AGENTS.md is most commonly used for.]
+
+## Method
+
+This project follows the scientific method in
+`method/SCIENTIFIC_METHOD.md` and the enforcement model in
+`method/ENFORCEMENT_MODEL.md` (adjust paths to wherever you vendor this
+repo's `method/` folder). The running protocol for this project is in
+`SCIENTIFIC_PROTOCOL.md`, based on `method/PROJECT_PROTOCOL_TEMPLATE.md`.
+
+Query it without reading the whole file: `method/protocol-search.sh
+hypotheses|incidents|phase|grep SCIENTIFIC_PROTOCOL.md ...`. If this
+project also runs the MCP service (`method/service/protocol_mcp_server.py`,
+registered via `codex mcp add` — see `../codex/install.sh`), the same
+queries are available as the `protocol_header` / `protocol_search` tools
+without a shell command.
+
+Before scaling any action beyond a 3-5 case pilot, confirm Phase 2 passed
+100% and get explicit approval — see `SCIENTIFIC_METHOD.md` for the full
+phase structure.
