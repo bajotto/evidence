@@ -14,7 +14,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 DEVIN_DIR="$HOME/.devin"
-DOCS_DIR="$DEVIN_DIR/scientific-method"
+DOCS_DIR="$DEVIN_DIR/evidence"
 HOOKS_DIR="$DEVIN_DIR/hooks"
 HOOKS_CONFIG="$DEVIN_DIR/hooks.v1.json"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,7 +25,7 @@ mkdir -p "$DOCS_DIR" "$HOOKS_DIR"
 # 1. Copy the global docs (warn instead of overwriting if a different
 #    version already exists). Operational docs are optional so this package
 #    stays tool-agnostic; the hook injects them when they are installed.
-for doc in SCIENTIFIC_METHOD.md ENFORCEMENT_MODEL.md ENFORCEMENT_CHECKLIST.md README_SESSIONS.md; do
+for doc in EVIDENCE.md ENFORCEMENT_MODEL.md ENFORCEMENT_CHECKLIST.md README_SESSIONS.md; do
   source="$METHOD_DIR/$doc"
   dest="$DOCS_DIR/$doc"
   if [ ! -f "$source" ]; then

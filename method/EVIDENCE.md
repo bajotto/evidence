@@ -1,4 +1,4 @@
-# The Scientific Method for AI-Assisted Work
+# Evidence for AI-Assisted Work
 
 Applies to any task where an AI agent generates output that will act on real
 systems or real people: sending messages, writing to a database, deploying
@@ -19,7 +19,7 @@ before acting on them.
 ## Information-preservation rule: inject the HEADER, preserve the history
 
 A protocol can exceed an agent context cap without losing its most important
-current state. Every `SCIENTIFIC_PROTOCOL.md` must therefore begin with a
+current state. Every `EVIDENCE_PROTOCOL.md` must therefore begin with a
 small, readable `PROTOCOL-HEADER` generated from the body. The header is the
 first context delivered at session start and on every prompt; the full body
 remains the source of history, evidence, incidents, and detailed phase notes.

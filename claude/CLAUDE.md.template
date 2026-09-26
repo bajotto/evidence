@@ -16,7 +16,7 @@
 
 ⚠️ **CRITICAL RULES — inline on purpose, not behind a link.**
 A link depends on someone choosing to open it. The rules below caused (or
-nearly caused) a real incident — see `SCIENTIFIC_PROTOCOL.md` for detail.
+nearly caused) a real incident — see `EVIDENCE_PROTOCOL.md` for detail.
 
 1. **[Your highest-cost failure mode].** [One or two sentences: what to do
    instead, and why — cite the incident it prevents if there is one.]
@@ -25,7 +25,7 @@ nearly caused) a real incident — see `SCIENTIFIC_PROTOCOL.md` for detail.
    real system state** (the actual deploy, the actual database) — a
    git push, a passing test, or a code comment is not confirmation.
 4. Full detail and the reasoning behind each rule:
-   [SCIENTIFIC_PROTOCOL.md](SCIENTIFIC_PROTOCOL.md).
+   [EVIDENCE_PROTOCOL.md](EVIDENCE_PROTOCOL.md).
 
 ## What this project does
 
@@ -33,10 +33,10 @@ nearly caused) a real incident — see `SCIENTIFIC_PROTOCOL.md` for detail.
 
 ## Method
 
-This project follows the scientific method described in
-[`../method/SCIENTIFIC_METHOD.md`](../method/SCIENTIFIC_METHOD.md) and the
+This project follows Evidence, described in
+[`../method/EVIDENCE.md`](../method/EVIDENCE.md), and the
 enforcement model in
 [`../method/ENFORCEMENT_MODEL.md`](../method/ENFORCEMENT_MODEL.md). The
 running protocol for this specific project lives in
-`SCIENTIFIC_PROTOCOL.md`, copied from
+`EVIDENCE_PROTOCOL.md`, copied from
 [`../method/PROJECT_PROTOCOL_TEMPLATE.md`](../method/PROJECT_PROTOCOL_TEMPLATE.md).

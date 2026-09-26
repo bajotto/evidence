@@ -1,6 +1,6 @@
-# [PROJECT_NAME] — Scientific Protocol
+# [PROJECT_NAME] — Evidence Protocol
 
-Copy this file into the root of your project as `SCIENTIFIC_PROTOCOL.md` and
+Copy this file into the root of your project as `EVIDENCE_PROTOCOL.md` and
 keep it updated as the running record for that project. It is the primary
 memory for future sessions — an AI agent (or a teammate) should be able to
 read this file alone and understand what has been validated, what failed,

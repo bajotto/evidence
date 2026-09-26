@@ -27,7 +27,7 @@ trigger: always_on
 ## Critical rules
 
 The rules below caused, or nearly caused, a real incident in this project.
-Full detail: `SCIENTIFIC_PROTOCOL.md`.
+Full detail: `EVIDENCE_PROTOCOL.md`.
 
 1. **[Your highest-cost failure mode].** [What to do instead, and why.]
 2. **[Second rule, if you have one].** [Same structure.]
@@ -45,9 +45,9 @@ Full detail: `SCIENTIFIC_PROTOCOL.md`.
 
 ## Method
 
-This project follows the scientific method in `method/SCIENTIFIC_METHOD.md`
+This project follows Evidence, described in `method/EVIDENCE.md`,
 and the enforcement model in `method/ENFORCEMENT_MODEL.md` (adjust the path
 to wherever you vendor this repo's `method/` folder, or rely on the global
 hook from `../install.sh` if it's installed on this machine). The running
-protocol for this project is in `SCIENTIFIC_PROTOCOL.md`, based on
+protocol for this project is in `EVIDENCE_PROTOCOL.md`, based on
 `method/PROJECT_PROTOCOL_TEMPLATE.md`.

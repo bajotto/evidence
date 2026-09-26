@@ -71,7 +71,7 @@ PROJECT_COUNT=$(echo "$OUTPUT" | grep -c '=== Project:')
                             || fail "only $PROJECT_COUNT projects discovered (Bug 2 regression)"
 
 # --- 4. session-start-protocol-global.sh: produces valid JSON ---
-JSON=$(echo '{"cwd":"/home/main/code/scientific-method-ai"}' | bash "$SESSION_START" 2>/dev/null)
+JSON=$(echo '{"cwd":"/home/main/code/evidence"}' | bash "$SESSION_START" 2>/dev/null)
 echo "$JSON" | jq -e '.hookSpecificOutput.hookEventName == "SessionStart"' >/dev/null 2>&1 \
   && pass "session-start produces valid JSON with SessionStart event" \
   || fail "session-start JSON invalid"
@@ -79,14 +79,14 @@ echo "$JSON" | jq -e '.hookSpecificOutput.hookEventName == "SessionStart"' >/dev
 # --- 5. session-start-protocol-global.sh: injects the canonical docs ---
 CONTEXT=$(echo "$JSON" | jq -r '.hookSpecificOutput.additionalContext')
 case "$CONTEXT" in
-  *SCIENTIFIC_METHOD.md*) pass "session-start injects SCIENTIFIC_METHOD.md";;
-  *) fail "session-start missing SCIENTIFIC_METHOD.md injection";;
+  *EVIDENCE.md*) pass "session-start injects EVIDENCE.md";;
+  *) fail "session-start missing EVIDENCE.md injection";;
 esac
 
 # --- 6. protocol-header.sh: generates a bounded, readable, indexed header ---
 HEADER="$HOOKS_DIR/protocol-header.sh"
 FIXTURE=$(mktemp)
-cp /home/main/code/managd/SCIENTIFIC_PROTOCOL.md "$FIXTURE"
+cp /home/main/code/managd/EVIDENCE_PROTOCOL.md "$FIXTURE"
 BEFORE=$(sha256sum "$FIXTURE" | cut -d' ' -f1)
 bash "$HEADER" sync "$FIXTURE" >/dev/null 2>&1 && pass "header sync succeeds" || fail "header sync failed"
 bash "$HEADER" check "$FIXTURE" >/dev/null 2>&1 && pass "header check succeeds" || fail "header check failed"
@@ -110,7 +110,7 @@ esac
 
 # --- 8. protocol-header.sh: PostToolUse auto-syncs protocol edits ---
 POST_FIXTURE=$(mktemp)
-cp /home/main/code/managd/SCIENTIFIC_PROTOCOL.md "$POST_FIXTURE"
+cp /home/main/code/managd/EVIDENCE_PROTOCOL.md "$POST_FIXTURE"
 rm -f "$POST_FIXTURE.tmp"
 printf '%s' "{\"cwd\":\"/tmp\",\"hook_event_name\":\"PostToolUse\",\"tool_name\":\"edit\",\"tool_input\":{\"file_path\":\"$POST_FIXTURE\"}}" | bash "$HEADER" hook >/dev/null 2>&1
 bash "$HEADER" check "$POST_FIXTURE" >/dev/null 2>&1 && pass "PostToolUse keeps edited protocol valid" || fail "PostToolUse did not validate protocol"
@@ -143,14 +143,14 @@ assert_not_contains "$SYNC" 'extract_h2' "no leftover extract_h2 references"
 
 echo ""
 # --- N. Protocol discovered from a subdirectory (regression) ---
-# The hook used to resolve the protocol as "$CWD/SCIENTIFIC_PROTOCOL.md" with no
+# The hook used to resolve the protocol as "$CWD/EVIDENCE_PROTOCOL.md" with no
 # walk up the tree. A session started in any subdirectory of the repo (server/,
 # web/, a monorepo package) got no protocol at all — and got it silently, so the
 # session ran with no phase, status or open hypotheses.
 PROTO_TMP="$(mktemp -d)"
 mkdir -p "$PROTO_TMP/proj/a/b"
-cp "$HOOKS_DIR/../../method/PROJECT_PROTOCOL_TEMPLATE.md" "$PROTO_TMP/proj/SCIENTIFIC_PROTOCOL.md" 2>/dev/null \
-  || printf '# SCIENTIFIC_PROTOCOL\n\n**Status:** test\n\n## 3. PHASES\n\nPhase 1.\n' > "$PROTO_TMP/proj/SCIENTIFIC_PROTOCOL.md"
+cp "$HOOKS_DIR/../../method/PROJECT_PROTOCOL_TEMPLATE.md" "$PROTO_TMP/proj/EVIDENCE_PROTOCOL.md" 2>/dev/null \
+  || printf '# EVIDENCE_PROTOCOL\n\n**Status:** test\n\n## 3. PHASES\n\nPhase 1.\n' > "$PROTO_TMP/proj/EVIDENCE_PROTOCOL.md"
 
 for depth in "proj" "proj/a" "proj/a/b"; do
   OUT=$(cd "$PROTO_TMP/$depth" && echo '{}' | timeout 20 bash "$SESSION_START" 2>/dev/null)
@@ -160,9 +160,9 @@ for depth in "proj" "proj/a" "proj/a/b"; do
 done
 
 # Deepest match wins: a nested protocol must override its parent's.
-printf '# nested\n\n**Status:** nested\n' > "$PROTO_TMP/proj/a/SCIENTIFIC_PROTOCOL.md"
+printf '# nested\n\n**Status:** nested\n' > "$PROTO_TMP/proj/a/EVIDENCE_PROTOCOL.md"
 OUT=$(cd "$PROTO_TMP/proj/a/b" && echo '{}' | timeout 20 bash "$SESSION_START" 2>/dev/null)
-echo "$OUT" | grep -q "proj/a/SCIENTIFIC_PROTOCOL.md" \
+echo "$OUT" | grep -q "proj/a/EVIDENCE_PROTOCOL.md" \
   && pass "nearest protocol wins over an ancestor's" \
   || fail "nearest protocol did not win over an ancestor's"
 
@@ -179,7 +179,7 @@ echo "$OUT" | grep -q "CURRENT PROTOCOL" \
 # and the hook swallows that with "|| true", so the header silently went stale.
 HDR="$HOOKS_DIR/protocol-header.sh"
 for cmd in emit check sync; do
-  timeout 8 bash "$HDR" "$cmd" "$PROTO_TMP/proj/SCIENTIFIC_PROTOCOL.md" < <(sleep 20) >/dev/null 2>&1
+  timeout 8 bash "$HDR" "$cmd" "$PROTO_TMP/proj/EVIDENCE_PROTOCOL.md" < <(sleep 20) >/dev/null 2>&1
   RC=$?
   [ "$RC" -ne 124 ] \
     && pass "protocol-header.sh $cmd does not block on an open stdin" \

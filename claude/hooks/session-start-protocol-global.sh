@@ -7,9 +7,9 @@
 # open it; this does not — it fires before any action, every session.
 #
 # Injects:
-#   - Upstream canonical method (SCIENTIFIC_METHOD.md, ENFORCEMENT_MODEL.md)
+#   - Upstream canonical method (EVIDENCE.md, ENFORCEMENT_MODEL.md)
 #   - Local operational docs (ENFORCEMENT_CHECKLIST.md, README_SESSIONS.md)
-#   - <project>/SCIENTIFIC_PROTOCOL.md if the current project has one
+#   - <project>/EVIDENCE_PROTOCOL.md if the current project has one
 #   - <project>/.claude/session-state.sh if it exists (live DB state)
 #
 # This does NOT guarantee the injected rules are followed, only that they
@@ -26,7 +26,7 @@ CLAUDE_DIR="${CLAUDE_DIR:-$HOME/.claude}"
 # Upstream canonical method (conceitual: H0/H1, fases, 3 camadas)
 # + local operational docs (checklist de regras, instruções de sessão)
 GLOBAL_FILES=(
-  "$CLAUDE_DIR/SCIENTIFIC_METHOD.md"
+  "$CLAUDE_DIR/EVIDENCE.md"
   "$CLAUDE_DIR/ENFORCEMENT_MODEL.md"
   "$CLAUDE_DIR/ENFORCEMENT_CHECKLIST.md"
   "$CLAUDE_DIR/README_SESSIONS.md"
@@ -51,13 +51,13 @@ done
 find_project_protocol() {
   _d="$1"
   while [ -n "$_d" ] && [ "$_d" != "/" ]; do
-    if [ -f "$_d/SCIENTIFIC_PROTOCOL.md" ]; then
-      printf '%s\n' "$_d/SCIENTIFIC_PROTOCOL.md"
+    if [ -f "$_d/EVIDENCE_PROTOCOL.md" ]; then
+      printf '%s\n' "$_d/EVIDENCE_PROTOCOL.md"
       return 0
     fi
     _d="$(dirname "$_d")"
   done
-  [ -f "/SCIENTIFIC_PROTOCOL.md" ] && printf '%s\n' "/SCIENTIFIC_PROTOCOL.md" && return 0
+  [ -f "/EVIDENCE_PROTOCOL.md" ] && printf '%s\n' "/EVIDENCE_PROTOCOL.md" && return 0
   return 1
 }
 PROJECT_PROTOCOL="$(find_project_protocol "$CWD" || true)"
@@ -113,5 +113,5 @@ $STATE_ERR"
 fi
 
 # Use stdin instead of --arg to avoid ARG_MAX overflow on large protocols
-# (e.g. jobs-agent SCIENTIFIC_PROTOCOL.md is ~722KB)
+# (e.g. jobs-agent EVIDENCE_PROTOCOL.md is ~722KB)
 printf '%s' "$CONTEXT" | jq -R -n --rawfile ctx /dev/stdin '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}'
