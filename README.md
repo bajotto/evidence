@@ -15,6 +15,8 @@ devin/     Implementation for Devin: a global SessionStart hook and
            per-project always-on rules, both confirmed against a real
            Devin CLI session — see devin/README.md for what was tested
            and what (AGENTS.md) is still documentation-only.
+codex/     Implementation for Codex: global lifecycle hooks that inject
+           the method and current project protocol into each session.
 ```
 
 ## Start here
@@ -30,7 +32,8 @@ devin/     Implementation for Devin: a global SessionStart hook and
 3. Copy [`method/PROJECT_PROTOCOL_TEMPLATE.md`](method/PROJECT_PROTOCOL_TEMPLATE.md)
    into your project as `SCIENTIFIC_PROTOCOL.md` and keep it updated as you
    work.
-4. Set up delivery for your tool: [`claude/`](claude/) or [`devin/`](devin/).
+4. Set up delivery for your tool: [`claude/`](claude/), [`devin/`](devin/),
+   or [`codex/`](codex/).
 
 ## What this repository does not give you
 
