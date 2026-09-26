@@ -29,8 +29,12 @@ devin/     Implementation for Devin: a global SessionStart hook and
    gap, one at a time.
 3. Copy [`method/PROJECT_PROTOCOL_TEMPLATE.md`](method/PROJECT_PROTOCOL_TEMPLATE.md)
    into your project as `SCIENTIFIC_PROTOCOL.md` and keep it updated as you
-   work.
+   work. Use [`method/protocol-search.sh`](method/protocol-search.sh) to query
+   hypotheses, incidents, and phases without reading the whole file.
 4. Set up delivery for your tool: [`claude/`](claude/) or [`devin/`](devin/).
+5. Read [`method/MULTI_AGENT_MULTI_MACHINE.md`](method/MULTI_AGENT_MULTI_MACHINE.md)
+   if you need the protocol to work across multiple agents, machines, or
+   contributors — it already does, mostly via git; that doc says exactly how.
 
 ## What this repository does not give you
 
