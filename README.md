@@ -8,6 +8,9 @@ only as good intentions in a document nobody reread at the right moment.
 
 ```
 method/    The method itself — tool-agnostic. Start here.
+           method/service/ is standalone mode's counterpart: a persistent
+           MCP server any MCP-capable agent can call instead of re-running
+           a hook every session — see "Standalone vs. service mode" below.
 claude/    Implementation for Claude Code: an inline-rules template
            and a global hook that force-injects the method into every
            session, on every project, on a given machine.
@@ -15,7 +18,24 @@ devin/     Implementation for Devin: a global SessionStart hook and
            per-project always-on rules, both confirmed against a real
            Devin CLI session — see devin/README.md for what was tested
            and what (AGENTS.md) is still documentation-only.
+codex/     Implementation for OpenAI Codex CLI: AGENTS.md (confirmed —
+           but only for a project marked "trusted", a real finding, not
+           documented upstream) plus MCP registration.
+cursor/    Implementation for Cursor: static .cursor/rules/*.mdc (confirmed
+           format) plus MCP registration. A sessionStart hook exists but
+           is not installed — open upstream reports of it silently not
+           reaching the model, see cursor/README.md.
+trae/      Implementation for Trae IDE: static .trae/rules/*.md (confirmed
+           format) plus MCP registration. No hook mechanism exists at all
+           for Trae — confirmed absent, not just unverified.
 ```
+
+Every one of these implementation folders states, explicitly, what was
+independently tested against a real install of that tool versus what is
+carried over from documentation/community reports only — this repo's own
+`ENFORCEMENT_MODEL.md` exists because "documented" and "true in practice"
+are different claims, and that discipline applies to this repo's own claims
+about other tools too.
 
 ## Start here
 
@@ -31,10 +51,29 @@ devin/     Implementation for Devin: a global SessionStart hook and
    into your project as `SCIENTIFIC_PROTOCOL.md` and keep it updated as you
    work. Use [`method/protocol-search.sh`](method/protocol-search.sh) to query
    hypotheses, incidents, and phases without reading the whole file.
-4. Set up delivery for your tool: [`claude/`](claude/) or [`devin/`](devin/).
+4. Set up delivery for your tool: [`claude/`](claude/), [`devin/`](devin/),
+   [`codex/`](codex/), [`cursor/`](cursor/), or [`trae/`](trae/).
 5. Read [`method/MULTI_AGENT_MULTI_MACHINE.md`](method/MULTI_AGENT_MULTI_MACHINE.md)
    if you need the protocol to work across multiple agents, machines, or
    contributors — it already does, mostly via git; that doc says exactly how.
+
+## Standalone vs. service mode
+
+Every tool folder above sets up **standalone mode**: no daemon, the tool's
+own hook or static-rule mechanism re-reads `SCIENTIFIC_PROTOCOL.md` (via
+`protocol-header.sh` / `protocol-search.sh`) each session. Zero dependencies,
+works offline, and is what `claude/` and `devin/` have done since this
+repo's first commit.
+
+**Service mode** is the alternative, not a replacement:
+[`method/service/protocol_mcp_server.py`](method/service/protocol_mcp_server.py)
+is one persistent process, speaking plain MCP (JSON-RPC 2.0 over stdio — no
+third-party dependency, no daemon framework), that any MCP-capable agent
+can call directly instead of shelling out per session. Cursor, Codex CLI,
+and Trae IDE all support MCP as a client (confirmed — see each tool's own
+README for exactly how); `codex/install.sh`, `cursor/install.sh`, and
+`trae/install.sh` all register it. Run both modes side by side; they read
+the same `SCIENTIFIC_PROTOCOL.md` and never conflict.
 
 ## What this repository does not give you
 

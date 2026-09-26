@@ -40,10 +40,16 @@ mechanism:
 - The memory is `SCIENTIFIC_PROTOCOL.md` — plain markdown, in the project's
   own repo, in no tool-specific format. Any agent that can read a file reads
   the same memory.
-- `method/` is the tool-agnostic core. `claude/`, `devin/`, and (via
-  `claude/hooks/sync-windsurf-rules.sh`) Windsurf/Cascade are three
-  independent delivery mechanisms that all inject the same protocol into
-  three different agents' context, with no shared runtime between them.
+- `method/` is the tool-agnostic core. `claude/`, `devin/`, `codex/`,
+  `cursor/`, `trae/`, and (via `claude/hooks/sync-windsurf-rules.sh`)
+  Windsurf/Cascade are six independent delivery mechanisms that all inject
+  or expose the same protocol to six different agents, with no shared
+  runtime between them.
+- `method/service/protocol_mcp_server.py` is the seventh, and the odd one
+  out on purpose: instead of a bespoke adapter per tool, it's one MCP
+  server every MCP-capable client (Cursor, Codex, Trae, and Claude Code
+  itself) can call the same way. See "Standalone vs. service mode" in the
+  top-level README.
 
 That is the cross-agent property directly: switch from Claude Code to Devin
 on the same project, and the next session's hook reads the same
@@ -51,11 +57,26 @@ on the same project, and the next session's hook reads the same
 nothing is lost, because nothing tool-specific was ever written into the
 memory in the first place.
 
-Adding a fourth agent (Cursor, Codex, Copilot, ...) means writing a fourth
-delivery adapter — a session-start hook that finds and injects the header,
-following the pattern in `claude/hooks/session-start-protocol-global.sh` or
-the static-regeneration pattern in `claude/hooks/sync-windsurf-rules.sh` for
-tools without a hook API. It does not mean touching the memory format itself.
+Adding another agent means one of two things, in order of preference:
+1. If it supports MCP, register `method/service/protocol_mcp_server.py`
+   with it — done, no new code (`codex/`, `cursor/`, and `trae/` are all
+   this case; each needed a small config-file writer, not a new server).
+2. If it doesn't, write a delivery adapter: a session-start hook that finds
+   and injects the header (`claude/hooks/session-start-protocol-global.sh`),
+   or, for a tool with only static rule files and no hook API at all
+   (`trae/`, or `claude/hooks/sync-windsurf-rules.sh` for Windsurf), a
+   regeneration script that derives the rule file from the canonical docs.
+
+Neither path touches the memory format itself. And "the tool supports a
+hook" turned out to need its own caution: verify the hook is actually
+delivered before trusting it as Layer 2. Building the Cursor and Codex
+adapters for this repo surfaced open, currently-unresolved upstream reports
+for both tools' session-start-style hooks — `additionalContext` silently
+not reaching the model on some versions, in both cases — which is why
+`codex/` and `cursor/` ship the confirmed-safe static/MCP paths and leave
+that specific hook as opt-in, documented, not installed by default. A
+hook's *existence* in a tool's docs is a Layer 1 claim; only running it
+and checking the result makes it Layer 2.
 
 ## 3. Multi-user support with attribution and audit — use git, don't rebuild it
 
