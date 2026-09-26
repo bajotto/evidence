@@ -25,8 +25,13 @@ MAX_STATUS = 900
 
 
 def project_name(text, path):
+    # The template's own title convention is "# PROJECT_NAME — Scientific
+    # Protocol" (project name first, generic suffix second) — group(1) is
+    # the project name. This returned group(2) instead, so every protocol
+    # following that convention reported "Scientific Protocol" itself as
+    # its **Project:** value, regardless of the actual project.
     match = re.search(r"^#\s+(.+?)(?:\s+—\s+|\s+-\s+)([^\n]+)$", text, re.MULTILINE)
-    return match.group(2).strip() if match else path.parent.name
+    return match.group(1).strip() if match else path.parent.name
 
 
 def first_value(text, labels, paragraph=False):
@@ -69,7 +74,8 @@ def phase_index(text):
     result = []
     for i, line in enumerate(text.splitlines(), 1):
         if re.match(r"^###\s+(?:Phase|Fase)\s+", line, re.IGNORECASE):
-            result.append(f"{re.sub(r'^###\\s+', '', line).strip()} (line {i})")
+            title = re.sub(r"^###\s+", "", line).strip()
+            result.append(f"{title} (line {i})")
     if len(result) <= 12:
         return result
     return result[:4] + [f"... {len(result) - 12} earlier/later phase headings omitted; search the full body ..."] + result[-7:]
@@ -117,6 +123,13 @@ def build_header(path, text):
     lines.extend(f"- {item}" for item in (sidx or ["No level-2 sections found."]))
     lines += [
         "",
+        "## Full-text search (do not read the whole body just to find one thing)",
+        "Installed next to this script (protocol-header.sh) by install.sh — same directory.",
+        "- protocol-search.sh hypotheses FILE           — every H<n>, with its Status line",
+        "- protocol-search.sh incidents FILE [PATTERN]  — incident log, optionally filtered",
+        "- protocol-search.sh phase FILE N              — just that Phase section",
+        "- protocol-search.sh grep FILE PATTERN          — free text, with enclosing section",
+        "",
         "**Next action:** read the body, verify the current phase/status, then state the session start before acting.",
         END,
     ]
@@ -133,9 +146,13 @@ def check(path):
         errors.append("expected exactly one START and END marker")
     elif text.index(START) > text.index(END):
         errors.append("START marker must precede END marker")
-    if text[: text.find(END) + len(END)].count("\n") > 80:
-        errors.append("header must end within first 80 lines")
     header = text[text.find(START): text.find(END) + len(END)] if START in text and END in text else ""
+    # Measured against the header block itself (START..END), not file-start..END:
+    # a project's own prose before the header (the template invites exactly this —
+    # "Copy this file into the root of your project...") must not count against the
+    # header's own bound, and must not leak into what emit hands to an agent.
+    if header.count("\n") > 80:
+        errors.append("header must end within first 80 lines")
     if len(header.encode()) > MAX_BYTES:
         errors.append(f"header exceeds {MAX_BYTES} bytes")
     for label in ("Project", "Current phase", "Last updated", "Current status", "Phase index", "Body index"):
@@ -153,8 +170,20 @@ def sync(path):
     text = path.read_text(encoding="utf-8")
     body = body_without_header(text)
     header = build_header(path, body)
-    if text.startswith(START):
-        new_text = re.sub(re.escape(START) + r".*?" + re.escape(END) + r"\s*\n?", header, text, count=1, flags=re.DOTALL)
+    if START in text and END in text:
+        # A callable repl avoids re.sub treating backslashes/backreferences in
+        # `header` specially — it is inserted verbatim either way. Matching
+        # START..END anywhere (not just at position 0) matters because a real
+        # protocol file, like the project template it was copied from, often
+        # carries prose before the header; startswith() missed that case and
+        # prepended a second header instead of replacing the existing one.
+        new_text = re.sub(
+            re.escape(START) + r".*?" + re.escape(END) + r"\s*\n?",
+            lambda _match: header,
+            text,
+            count=1,
+            flags=re.DOTALL,
+        )
     else:
         new_text = header + text
     if new_text != text:
@@ -207,7 +236,16 @@ if command in {"sync", "check", "emit"}:
         sys.exit(sync(path))
     if command == "check":
         sys.exit(check(path))
-    print(path.read_text(encoding="utf-8").split(END, 1)[0] + END)
+    # emit: only the header block (START..END), never whatever precedes it.
+    # A file-start..END slice used to be printed instead, which meant any
+    # prose before the header (the project template itself carries some —
+    # see the same startswith() bug this fixed in sync()) leaked into every
+    # hook injection instead of the bounded header alone.
+    emit_text = path.read_text(encoding="utf-8")
+    if START in emit_text and END in emit_text:
+        print(emit_text[emit_text.index(START): emit_text.index(END) + len(END)])
+    else:
+        print(emit_text.split(END, 1)[0] + END)
     sys.exit(0)
 elif command == "hook":
     sys.exit(hook())

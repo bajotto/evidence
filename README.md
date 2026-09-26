@@ -8,6 +8,9 @@ only as good intentions in a document nobody reread at the right moment.
 
 ```
 method/    The method itself — tool-agnostic. Start here.
+           method/service/ is standalone mode's counterpart: a persistent
+           MCP server any MCP-capable agent can call instead of re-running
+           a hook every session — see "Standalone vs. service mode" below.
 claude/    Implementation for Claude Code: an inline-rules template
            and a global hook that force-injects the method into every
            session, on every project, on a given machine.
@@ -15,25 +18,53 @@ devin/     Implementation for Devin: a global SessionStart hook and
            per-project always-on rules, both confirmed against a real
            Devin CLI session — see devin/README.md for what was tested
            and what (AGENTS.md) is still documentation-only.
-codex/     Implementation for Codex: global lifecycle hooks that inject
-           the method and current project protocol into each session.
+codex/     Implementation for OpenAI Codex CLI: AGENTS.md (confirmed —
+           but only for a project marked "trusted", a real finding, not
+           documented upstream) plus MCP registration.
+cursor/    Implementation for Cursor: static .cursor/rules/*.mdc (confirmed
+           format) plus MCP registration. A sessionStart hook exists but
+           is not installed — open upstream reports of it silently not
+           reaching the model, see cursor/README.md.
+trae/      Implementation for Trae IDE: static .trae/rules/*.md (confirmed
+           format) plus MCP registration. No hook mechanism exists at all
+           for Trae — confirmed absent, not just unverified.
 ```
 
-## Start here
+Every one of these implementation folders states, explicitly, what was
+independently tested against a real install of that tool versus what is
+carried over from documentation/community reports only — this repo's own
+`ENFORCEMENT_MODEL.md` exists because "documented" and "true in practice"
+are different claims, and that discipline applies to this repo's own claims
+about other tools too.
 
-1. Read [`method/EVIDENCE.md`](method/EVIDENCE.md) — how
-   to validate what your AI-driven system produces, in phases, with
-   explicit acceptance criteria. Its `PROTOCOL-HEADER` rule keeps current
-   phase, gates, and a body index readable even when protocol history is huge.
-2. Read [`method/ENFORCEMENT_MODEL.md`](method/ENFORCEMENT_MODEL.md) — why
-   a rule being *written down* doesn't mean it will be *followed*, and the
-   three layers (text, forced delivery, code enforcement) that close that
-   gap, one at a time.
-3. Copy [`method/PROJECT_PROTOCOL_TEMPLATE.md`](method/PROJECT_PROTOCOL_TEMPLATE.md)
-   into your project as `EVIDENCE_PROTOCOL.md` and keep it updated as you
-   work.
-4. Set up delivery for your tool: [`claude/`](claude/), [`devin/`](devin/),
-   or [`codex/`](codex/).
+## Quick start (3 steps)
+
+**For humans setting up a project:**
+1. Read [`INSTALLATION_GUIDE.md`](INSTALLATION_GUIDE.md) — choose standalone or service mode, then run one `install.sh` command
+2. Copy [`method/PROJECT_PROTOCOL_TEMPLATE.md`](method/PROJECT_PROTOCOL_TEMPLATE.md) to your project as `EVIDENCE_PROTOCOL.md`
+3. Start using [`method/EVIDENCE.md`](method/EVIDENCE.md) to write your protocol
+
+**For agents (Claude, Devin, Cursor, etc.):**
+1. Follow [`INSTALLATION_GUIDE.md`](INSTALLATION_GUIDE.md) steps for your tool
+2. Ask the human which mode they prefer (standalone = zero daemon, service = shared server)
+3. Run the `install.sh` for their tool, copy the template, point them to the method docs
+
+## Full documentation
+
+- [`INSTALLATION_GUIDE.md`](INSTALLATION_GUIDE.md) — **start here** — how to install standalone or service mode
+- [`method/EVIDENCE.md`](method/EVIDENCE.md) — how to write and maintain your protocol
+- [`method/ENFORCEMENT_MODEL.md`](method/ENFORCEMENT_MODEL.md) — why delivery mode matters (3 layers: text, forced delivery, code enforcement)
+- [`method/MULTI_AGENT_MULTI_MACHINE.md`](method/MULTI_AGENT_MULTI_MACHINE.md) — cross-agent, cross-machine, multi-user setup (already solved by git)
+- `{tool}/README.md` (e.g., [`cursor/README.md`](cursor/README.md)) — what's confirmed vs. documentation-only for each tool
+- [`method/protocol-search.sh`](method/protocol-search.sh) — query your protocol without reading the whole body
+
+## Two delivery modes (choose one, or run both)
+
+**Standalone** (recommended for most): Hook or static rule runs each session, re-reads the protocol. Zero daemon. Works offline. Default for all agents.
+
+**Service** (optional, via MCP): One persistent process answers protocol queries. Slightly faster, ideal for multiple agents on one machine. Cursor, Codex, and Trae can use this instead of hooks.
+
+**Both run on the same `EVIDENCE_PROTOCOL.md` and never conflict.** See [`INSTALLATION_GUIDE.md`](INSTALLATION_GUIDE.md) for complete setup instructions and trade-offs.
 
 ## What this repository does not give you
 
