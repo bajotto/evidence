@@ -16,11 +16,11 @@ fail() { echo "FAIL: $1"; FAIL=$((FAIL + 1)); }
 
 PROJ="$(mktemp -d)"
 trap 'rm -rf "$PROJ"' EXIT
-cp "$TEMPLATE" "$PROJ/SCIENTIFIC_PROTOCOL.md"
+cp "$TEMPLATE" "$PROJ/EVIDENCE_PROTOCOL.md"
 
 # --- sync-cursor-rules.sh: generates a valid .mdc with required frontmatter ---
 bash "$SYNC" "$PROJ" >/dev/null
-RULE="$PROJ/.cursor/rules/scientific-method.mdc"
+RULE="$PROJ/.cursor/rules/evidence.mdc"
 [ -f "$RULE" ] && pass "rule file created" || fail "rule file not created"
 head -1 "$RULE" | grep -q '^---$' && pass "rule file starts with frontmatter delimiter" || fail "rule file missing frontmatter delimiter"
 grep -q '^alwaysApply: true$' "$RULE" && pass "rule file declares alwaysApply: true" || fail "rule file missing alwaysApply: true"
@@ -43,9 +43,9 @@ python3 "$MCP_WRITER" "$MCP_JSON" /fake/path/protocol_mcp_server.py >/dev/null
 python3 -c "
 import json
 data = json.load(open('$MCP_JSON'))
-assert 'scientific-method' in data['mcpServers'], 'missing scientific-method entry'
-assert data['mcpServers']['scientific-method']['command'] == 'python3'
-" && pass "mcp.json has correctly-shaped scientific-method entry" || fail "mcp.json entry malformed"
+assert 'evidence' in data['mcpServers'], 'missing evidence entry'
+assert data['mcpServers']['evidence']['command'] == 'python3'
+" && pass "mcp.json has correctly-shaped evidence entry" || fail "mcp.json entry malformed"
 
 # --- preserves a pre-existing unrelated server entry ---
 python3 -c "
@@ -59,7 +59,7 @@ python3 -c "
 import json
 data = json.load(open('$MCP_JSON'))
 assert 'other-server' in data['mcpServers'], 'other-server entry was dropped'
-assert 'scientific-method' in data['mcpServers']
+assert 'evidence' in data['mcpServers']
 " && pass "mcp.json writer preserves a pre-existing unrelated server entry" || fail "mcp.json writer dropped a pre-existing entry"
 
 # --- idempotent ---

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Search a SCIENTIFIC_PROTOCOL.md body without loading all of it into context.
+# Search a EVIDENCE_PROTOCOL.md body without loading all of it into context.
 #
 # The PROTOCOL-HEADER stays capped at 8KB (see protocol-header.sh), but the
 # body it summarizes does not: one real project's protocol reached ~722KB.

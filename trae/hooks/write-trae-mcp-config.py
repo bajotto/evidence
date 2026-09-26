@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Register the scientific-method MCP server in a Trae .trae/mcp.json file.
+"""Register the evidence MCP server in a Trae .trae/mcp.json file.
 
 Trae's schema (confirmed via docs.trae.ai and cross-referenced community
 sourcing — see trae/README.md): identical shape to Cursor's,
@@ -16,7 +16,7 @@ import json
 import sys
 from pathlib import Path
 
-SERVER_NAME = "scientific-method"
+SERVER_NAME = "evidence"
 
 
 def main() -> int:

@@ -23,7 +23,7 @@ per-module versions, with the same activation logic as `.trae/rules/` — the
 same file Codex and (as an alternative) Cursor read.
 
 [`hooks/sync-trae-rules.sh`](hooks/sync-trae-rules.sh) generates
-`.trae/rules/scientific-method.md` from the canonical method docs and the
+`.trae/rules/evidence.md` from the canonical method docs and the
 project's current `PROTOCOL-HEADER` — same derive-from-canonical-source
 pattern as the Cursor and Windsurf adapters.
 
@@ -32,7 +32,7 @@ pattern as the Cursor and Windsurf adapters.
 `.trae/mcp.json`, project-scoped only (no documented global MCP surface),
 same `{"mcpServers": {"<name>": {"command", "args", "env"}}}` shape as
 Cursor's. [`hooks/write-trae-mcp-config.py`](hooks/write-trae-mcp-config.py)
-merges the `scientific-method` entry in, idempotently. As with the other
+merges the `evidence` entry in, idempotently. As with the other
 adapters, the server's own MCP correctness is independently tested (see
 [`../method/service/test-protocol-mcp-server.sh`](../method/service/test-protocol-mcp-server.sh));
 Trae actually calling it end-to-end is not, for the same environment reason.
@@ -56,8 +56,8 @@ the entire standalone-mode delivery mechanism.
 ./install.sh /path/to/project
 ```
 
-Generates `.trae/rules/scientific-method.md` and registers the
-`scientific-method` MCP server in that project's `.trae/mcp.json`. Re-run
+Generates `.trae/rules/evidence.md` and registers the
+`evidence` MCP server in that project's `.trae/mcp.json`. Re-run
 any time — both steps are idempotent.
 
 ## What this does and does not guarantee

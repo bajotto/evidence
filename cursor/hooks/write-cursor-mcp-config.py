@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Register the scientific-method MCP server in a Cursor mcp.json file.
+"""Register the evidence MCP server in a Cursor mcp.json file.
 
 Cursor's schema (confirmed against current docs/community guides — this repo
 could not install the real Cursor binary in its test environment, see
@@ -17,7 +17,7 @@ import json
 import sys
 from pathlib import Path
 
-SERVER_NAME = "scientific-method"
+SERVER_NAME = "evidence"
 
 
 def main() -> int:

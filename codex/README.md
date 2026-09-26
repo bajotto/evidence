@@ -32,8 +32,8 @@ the working directory, `AGENTS.override.md` taking precedence over
 (default 32KB, configurable in `config.toml`).
 
 **MCP server registration works exactly as documented.**
-`codex mcp add scientific-method -- python3 .../protocol_mcp_server.py`
-writes a `[mcp_servers.scientific-method]` table to `~/.codex/config.toml`
+`codex mcp add evidence -- python3 .../protocol_mcp_server.py`
+writes a `[mcp_servers.evidence]` table to `~/.codex/config.toml`
 with the exact `command`/`args` given, confirmed idempotent (re-running
 updates the entry, does not duplicate it). `install.sh` uses this instead
 of hand-writing TOML.
@@ -74,8 +74,8 @@ the payload shape is close enough to Claude Code's that most of the
 ./install.sh
 ```
 
-Copies the canonical docs to `~/.codex/scientific-method/` for reference,
-and registers the `scientific-method` MCP server globally if `codex` is on
+Copies the canonical docs to `~/.codex/evidence/` for reference,
+and registers the `evidence` MCP server globally if `codex` is on
 `PATH`. Then, per project:
 
 1. Copy [`AGENTS.md.template`](AGENTS.md.template) to `<project>/AGENTS.md`

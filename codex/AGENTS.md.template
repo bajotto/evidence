@@ -17,7 +17,7 @@
 ## Critical rules
 
 The rules below caused, or nearly caused, a real incident in this project.
-Full detail: `SCIENTIFIC_PROTOCOL.md`.
+Full detail: `EVIDENCE_PROTOCOL.md`.
 
 1. **[Your highest-cost failure mode].** [What to do instead, and why.]
 2. **[Second rule, if you have one].** [Same structure.]
@@ -35,19 +35,19 @@ Full detail: `SCIENTIFIC_PROTOCOL.md`.
 
 ## Method
 
-This project follows the scientific method in
-`method/SCIENTIFIC_METHOD.md` and the enforcement model in
+This project follows Evidence, described in
+`method/EVIDENCE.md` and the enforcement model in
 `method/ENFORCEMENT_MODEL.md` (adjust paths to wherever you vendor this
 repo's `method/` folder). The running protocol for this project is in
-`SCIENTIFIC_PROTOCOL.md`, based on `method/PROJECT_PROTOCOL_TEMPLATE.md`.
+`EVIDENCE_PROTOCOL.md`, based on `method/PROJECT_PROTOCOL_TEMPLATE.md`.
 
 Query it without reading the whole file: `method/protocol-search.sh
-hypotheses|incidents|phase|grep SCIENTIFIC_PROTOCOL.md ...`. If this
+hypotheses|incidents|phase|grep EVIDENCE_PROTOCOL.md ...`. If this
 project also runs the MCP service (`method/service/protocol_mcp_server.py`,
 registered via `codex mcp add` — see `../codex/install.sh`), the same
 queries are available as the `protocol_header` / `protocol_search` tools
 without a shell command.
 
 Before scaling any action beyond a 3-5 case pilot, confirm Phase 2 passed
-100% and get explicit approval — see `SCIENTIFIC_METHOD.md` for the full
+100% and get explicit approval — see `EVIDENCE.md` for the full
 phase structure.

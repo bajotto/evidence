@@ -17,7 +17,7 @@
 #   3. emit printed file-start..END instead of START..END, leaking that same
 #      preamble into every hook injection.
 #   4. project_name() returned the wrong regex group, so **Project:** showed
-#      the generic "Scientific Protocol" title suffix instead of the actual
+#      the generic "Evidence Protocol" title suffix instead of the actual
 #      project name, for every protocol following the template's own title
 #      convention.
 set -uo pipefail
@@ -85,9 +85,9 @@ echo "$OUT" | grep -q "Phase 2 — Pilot (line" && pass "phase index lists Phase
                                                || fail "phase index missing Phase 2 entry"
 
 # --- Project: must be the actual project name, not the generic title suffix ---
-# The template's own title is "# [PROJECT_NAME] — Scientific Protocol" (project
+# The template's own title is "# [PROJECT_NAME] — Evidence Protocol" (project
 # name first, generic suffix second); project_name() returned the wrong regex
-# group and reported "Scientific Protocol" itself as **Project:** for every
+# group and reported "Evidence Protocol" itself as **Project:** for every
 # protocol following that convention, regardless of the real project name.
 echo "$OUT" | grep -q '\*\*Project:\*\* \[PROJECT_NAME\]$' && pass "Project: reports the actual project name" \
                                                             || fail "Project: reports the generic title suffix instead of the project name"
