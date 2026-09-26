@@ -37,43 +37,34 @@ carried over from documentation/community reports only — this repo's own
 are different claims, and that discipline applies to this repo's own claims
 about other tools too.
 
-## Start here
+## Quick start (3 steps)
 
-1. Read [`method/SCIENTIFIC_METHOD.md`](method/SCIENTIFIC_METHOD.md) — how
-   to validate what your AI-driven system produces, in phases, with
-   explicit acceptance criteria. Its `PROTOCOL-HEADER` rule keeps current
-   phase, gates, and a body index readable even when protocol history is huge.
-2. Read [`method/ENFORCEMENT_MODEL.md`](method/ENFORCEMENT_MODEL.md) — why
-   a rule being *written down* doesn't mean it will be *followed*, and the
-   three layers (text, forced delivery, code enforcement) that close that
-   gap, one at a time.
-3. Copy [`method/PROJECT_PROTOCOL_TEMPLATE.md`](method/PROJECT_PROTOCOL_TEMPLATE.md)
-   into your project as `SCIENTIFIC_PROTOCOL.md` and keep it updated as you
-   work. Use [`method/protocol-search.sh`](method/protocol-search.sh) to query
-   hypotheses, incidents, and phases without reading the whole file.
-4. Set up delivery for your tool: [`claude/`](claude/), [`devin/`](devin/),
-   [`codex/`](codex/), [`cursor/`](cursor/), or [`trae/`](trae/).
-5. Read [`method/MULTI_AGENT_MULTI_MACHINE.md`](method/MULTI_AGENT_MULTI_MACHINE.md)
-   if you need the protocol to work across multiple agents, machines, or
-   contributors — it already does, mostly via git; that doc says exactly how.
+**For humans setting up a project:**
+1. Read [`INSTALLATION_GUIDE.md`](INSTALLATION_GUIDE.md) — choose standalone or service mode, then run one `install.sh` command
+2. Copy [`method/PROJECT_PROTOCOL_TEMPLATE.md`](method/PROJECT_PROTOCOL_TEMPLATE.md) to your project as `SCIENTIFIC_PROTOCOL.md`
+3. Start using [`method/SCIENTIFIC_METHOD.md`](method/SCIENTIFIC_METHOD.md) to write your protocol
 
-## Standalone vs. service mode
+**For agents (Claude, Devin, Cursor, etc.):**
+1. Follow [`INSTALLATION_GUIDE.md`](INSTALLATION_GUIDE.md) steps for your tool
+2. Ask the human which mode they prefer (standalone = zero daemon, service = shared server)
+3. Run the `install.sh` for their tool, copy the template, point them to the method docs
 
-Every tool folder above sets up **standalone mode**: no daemon, the tool's
-own hook or static-rule mechanism re-reads `SCIENTIFIC_PROTOCOL.md` (via
-`protocol-header.sh` / `protocol-search.sh`) each session. Zero dependencies,
-works offline, and is what `claude/` and `devin/` have done since this
-repo's first commit.
+## Full documentation
 
-**Service mode** is the alternative, not a replacement:
-[`method/service/protocol_mcp_server.py`](method/service/protocol_mcp_server.py)
-is one persistent process, speaking plain MCP (JSON-RPC 2.0 over stdio — no
-third-party dependency, no daemon framework), that any MCP-capable agent
-can call directly instead of shelling out per session. Cursor, Codex CLI,
-and Trae IDE all support MCP as a client (confirmed — see each tool's own
-README for exactly how); `codex/install.sh`, `cursor/install.sh`, and
-`trae/install.sh` all register it. Run both modes side by side; they read
-the same `SCIENTIFIC_PROTOCOL.md` and never conflict.
+- [`INSTALLATION_GUIDE.md`](INSTALLATION_GUIDE.md) — **start here** — how to install standalone or service mode
+- [`method/SCIENTIFIC_METHOD.md`](method/SCIENTIFIC_METHOD.md) — how to write and maintain your protocol
+- [`method/ENFORCEMENT_MODEL.md`](method/ENFORCEMENT_MODEL.md) — why delivery mode matters (3 layers: text, forced delivery, code enforcement)
+- [`method/MULTI_AGENT_MULTI_MACHINE.md`](method/MULTI_AGENT_MULTI_MACHINE.md) — cross-agent, cross-machine, multi-user setup (already solved by git)
+- `{tool}/README.md` (e.g., [`cursor/README.md`](cursor/README.md)) — what's confirmed vs. documentation-only for each tool
+- [`method/protocol-search.sh`](method/protocol-search.sh) — query your protocol without reading the whole body
+
+## Two delivery modes (choose one, or run both)
+
+**Standalone** (recommended for most): Hook or static rule runs each session, re-reads the protocol. Zero daemon. Works offline. Default for all agents.
+
+**Service** (optional, via MCP): One persistent process answers protocol queries. Slightly faster, ideal for multiple agents on one machine. Cursor, Codex, and Trae can use this instead of hooks.
+
+**Both run on the same `SCIENTIFIC_PROTOCOL.md` and never conflict.** See [`INSTALLATION_GUIDE.md`](INSTALLATION_GUIDE.md) for complete setup instructions and trade-offs.
 
 ## What this repository does not give you
 
