@@ -119,6 +119,7 @@ def build_header(path, text):
     lines += [
         "",
         "## Full-text search (do not read the whole body just to find one thing)",
+        "Installed next to this script (protocol-header.sh) by install.sh — same directory.",
         "- protocol-search.sh hypotheses FILE           — every H<n>, with its Status line",
         "- protocol-search.sh incidents FILE [PATTERN]  — incident log, optionally filtered",
         "- protocol-search.sh phase FILE N              — just that Phase section",
