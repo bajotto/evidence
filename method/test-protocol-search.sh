@@ -38,6 +38,21 @@ cat > "$FIXTURE" <<'EOF'
 - **Acceptance criterion:** 0 occurrences of `{{` in sent output
 - **Status:** ⏳ not yet tested
 
+### H3: long preceding bullets must not push Status out of reach
+- **H0 (null):** a hypothesis whose H0/H1/acceptance-criterion bullets each
+  wrap across several physical lines pushes the Status bullet far enough
+  down that a fixed-size lookahead window misses it entirely.
+- **H1 (alternative):** Status is found and its own wrapped continuation
+  lines are joined into one line, regardless of how long the bullets
+  before it are.
+- **Acceptance criterion:** this exact case (three multi-line bullets
+  before Status, and Status itself wrapping across three lines) resolves
+  to a single joined line, not "(not stated)".
+- **Status:** ✅ validated — this status line itself wraps across three
+  physical lines in the source file, on purpose, to exercise exactly the
+  continuation logic being tested here, ending with a closing marker:
+  STATUS_END_MARKER
+
 ## 2. Phases
 
 ### Phase 1 — Discovery
@@ -79,6 +94,15 @@ echo "$OUT" | grep -q "H2: no broken placeholders" && pass "hypotheses lists H2"
 echo "$OUT" | grep -q "validated (12/12, 2026-08-01)" && pass "hypotheses shows H1 status" \
                                                        || fail "hypotheses did not show H1 status"
 echo "$OUT" | grep -q "not yet tested" && pass "hypotheses shows H2 status" || fail "hypotheses did not show H2 status"
+
+# --- hypotheses: a status wrapped across physical lines, behind long ---
+# --- preceding bullets, is still found and joined onto one line ---
+echo "$OUT" | grep -q "H3: long preceding bullets" && pass "hypotheses lists H3" || fail "hypotheses missing H3"
+H3_LINE=$(echo "$OUT" | grep "STATUS_END_MARKER")
+[ -n "$H3_LINE" ] && pass "hypotheses joins a multi-line H3 status onto one line" \
+                   || fail "hypotheses truncated a multi-line status (regression)"
+echo "$H3_LINE" | grep -qv "^     Status: (not stated)$" && pass "H3 status is not '(not stated)'" \
+                                                           || fail "H3 status incorrectly shows '(not stated)'"
 
 # --- incidents: lists both ---
 OUT="$("$SEARCH" incidents "$FIXTURE")"

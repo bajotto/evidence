@@ -65,14 +65,27 @@ def cmd_hypotheses(path):
         if not m:
             continue
         found = True
+        # Scan the whole hypothesis block (up to the next heading), not a
+        # fixed line count — H0/H1/acceptance-criterion bullets are often
+        # long enough on their own to push Status past any small fixed cap.
+        block_end = next((k for k in range(i + 1, len(lines)) if re.match(r"^###\s+", lines[k])), len(lines))
         status = ""
-        for j in range(i + 1, min(i + 12, len(lines))):
-            if re.match(r"^###\s+", lines[j]):
-                break
+        for j in range(i + 1, block_end):
             sm = re.match(r"^-?\s*\*\*Status:?\*\*\s*(.*)$", lines[j], re.IGNORECASE)
-            if sm:
-                status = sm.group(1).strip()
-                break
+            if not sm:
+                continue
+            # A status written as normal prose commonly wraps across several
+            # physical lines. Keep consuming until whatever ends the entry:
+            # a blank line, the next bulleted/bold field, or the block's end
+            # — otherwise only the first physical line was ever shown, and a
+            # wrapped status silently looked like "(not stated)".
+            parts = [sm.group(1).strip()]
+            for nxt in lines[j + 1:block_end]:
+                if not nxt.strip() or re.match(r"^-?\s*\*\*", nxt):
+                    break
+                parts.append(nxt.strip())
+            status = re.sub(r"\s+", " ", " ".join(parts)).strip()
+            break
         print(f"L{i + 1} {m.group(1).strip()}")
         print(f"     Status: {status or '(not stated)'}")
     if not found:
