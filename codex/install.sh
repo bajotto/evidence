@@ -18,7 +18,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 METHOD_DIR="$(cd "$SCRIPT_DIR/../method" && pwd)"
 CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
-DOCS_DIR="$CODEX_DIR/scientific-method"
+DOCS_DIR="$CODEX_DIR/evidence"
 
 mkdir -p "$DOCS_DIR"
 
@@ -26,7 +26,7 @@ mkdir -p "$DOCS_DIR"
 #    machine-wide "read this on every session" hook (see README.md), so this
 #    is reference material for whoever sets up AGENTS.md or the optional
 #    hooks.json, not something Codex reads on its own.
-for doc in SCIENTIFIC_METHOD.md ENFORCEMENT_MODEL.md; do
+for doc in EVIDENCE.md ENFORCEMENT_MODEL.md; do
   dest="$DOCS_DIR/$doc"
   if [ -f "$dest" ] && ! diff -q "$METHOD_DIR/$doc" "$dest" >/dev/null 2>&1; then
     echo "WARNING: $dest already exists and differs from this package — not overwriting."
@@ -41,13 +41,13 @@ done
 #    does not duplicate it) and it only ever touches the mcp_servers table,
 #    never trust/sandbox config.
 if command -v codex >/dev/null 2>&1; then
-  codex mcp add scientific-method -- python3 "$METHOD_DIR/service/protocol_mcp_server.py"
-  echo "OK  registered MCP server 'scientific-method' (codex mcp get scientific-method to inspect)"
+  codex mcp add evidence -- python3 "$METHOD_DIR/service/protocol_mcp_server.py"
+  echo "OK  registered MCP server 'evidence' (codex mcp get evidence to inspect)"
 else
   cat <<EOF
 NOTE: 'codex' was not found on PATH, so the MCP server was not registered.
 Once Codex CLI is installed, run:
-  codex mcp add scientific-method -- python3 "$METHOD_DIR/service/protocol_mcp_server.py"
+  codex mcp add evidence -- python3 "$METHOD_DIR/service/protocol_mcp_server.py"
 EOF
 fi
 

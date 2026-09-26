@@ -35,8 +35,8 @@ HEADER_SCRIPT="$METHOD_DIR/protocol-header.sh"
 find_project_protocol() {
   _d="$1"
   while [ -n "$_d" ] && [ "$_d" != "/" ]; do
-    if [ -f "$_d/SCIENTIFIC_PROTOCOL.md" ]; then
-      printf '%s\n' "$_d/SCIENTIFIC_PROTOCOL.md"
+    if [ -f "$_d/EVIDENCE_PROTOCOL.md" ]; then
+      printf '%s\n' "$_d/EVIDENCE_PROTOCOL.md"
       return 0
     fi
     _d="$(dirname "$_d")"

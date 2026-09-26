@@ -25,10 +25,10 @@ MAX_STATUS = 900
 
 
 def project_name(text, path):
-    # The template's own title convention is "# PROJECT_NAME — Scientific
+    # The template's own title convention is "# PROJECT_NAME — Evidence
     # Protocol" (project name first, generic suffix second) — group(1) is
     # the project name. This returned group(2) instead, so every protocol
-    # following that convention reported "Scientific Protocol" itself as
+    # following that convention reported "Evidence Protocol" itself as
     # its **Project:** value, regardless of the actual project.
     match = re.search(r"^#\s+(.+?)(?:\s+—\s+|\s+-\s+)([^\n]+)$", text, re.MULTILINE)
     return match.group(1).strip() if match else path.parent.name

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Service-mode delivery for the scientific method: one persistent MCP server.
+"""Service-mode delivery for the evidence: one persistent MCP server.
 
 Standalone mode (the rest of this repo) delivers the protocol by having each
 tool's own hook re-run protocol-header.sh/protocol-search.sh per session, per
@@ -36,7 +36,7 @@ METHOD_DIR = HERE.parent
 PROTOCOL_HEADER_SH = METHOD_DIR / "protocol-header.sh"
 PROTOCOL_SEARCH_SH = METHOD_DIR / "protocol-search.sh"
 PROTOCOL_VERSION = "2024-11-05"
-SERVER_NAME = "scientific-method-protocol"
+SERVER_NAME = "evidence-protocol"
 SERVER_VERSION = "0.1.0"
 
 TOOLS = [
@@ -44,7 +44,7 @@ TOOLS = [
         "name": "protocol_header",
         "description": (
             "Return the current PROTOCOL-HEADER (phase, status, phase/body "
-            "index, gates) for the SCIENTIFIC_PROTOCOL.md nearest to "
+            "index, gates) for the EVIDENCE_PROTOCOL.md nearest to "
             "project_path, re-syncing it first. Use this instead of reading "
             "the whole protocol file just to check current phase/status."
         ),
@@ -53,7 +53,7 @@ TOOLS = [
             "properties": {
                 "project_path": {
                     "type": "string",
-                    "description": "Any path inside the project; the nearest ancestor SCIENTIFIC_PROTOCOL.md is used.",
+                    "description": "Any path inside the project; the nearest ancestor EVIDENCE_PROTOCOL.md is used.",
                 }
             },
             "required": ["project_path"],
@@ -62,7 +62,7 @@ TOOLS = [
     {
         "name": "protocol_search",
         "description": (
-            "Query the SCIENTIFIC_PROTOCOL.md nearest to project_path without "
+            "Query the EVIDENCE_PROTOCOL.md nearest to project_path without "
             "reading the whole body: list hypotheses with status, list "
             "incidents (optionally filtered), print one phase section, or "
             "free-text grep with enclosing-section context."
@@ -72,7 +72,7 @@ TOOLS = [
             "properties": {
                 "project_path": {
                     "type": "string",
-                    "description": "Any path inside the project; the nearest ancestor SCIENTIFIC_PROTOCOL.md is used.",
+                    "description": "Any path inside the project; the nearest ancestor EVIDENCE_PROTOCOL.md is used.",
                 },
                 "mode": {
                     "type": "string",
@@ -94,7 +94,7 @@ TOOLS = [
 
 
 def find_protocol(start: str) -> Path | None:
-    """Walk upward from `start` looking for SCIENTIFIC_PROTOCOL.md.
+    """Walk upward from `start` looking for EVIDENCE_PROTOCOL.md.
 
     Mirrors claude/hooks/session-start-protocol-global.sh's find_project_protocol:
     the nearest (deepest) match wins, so a nested protocol overrides an
@@ -105,7 +105,7 @@ def find_protocol(start: str) -> Path | None:
     if d.is_file():
         d = d.parent
     while True:
-        candidate = d / "SCIENTIFIC_PROTOCOL.md"
+        candidate = d / "EVIDENCE_PROTOCOL.md"
         if candidate.is_file():
             return candidate
         if d.parent == d:
@@ -121,7 +121,7 @@ def call_protocol_header(args: dict) -> dict:
     project_path = args.get("project_path", "")
     protocol = find_protocol(project_path)
     if protocol is None:
-        return text_result(f"No SCIENTIFIC_PROTOCOL.md found at or above {project_path!r}", is_error=True)
+        return text_result(f"No EVIDENCE_PROTOCOL.md found at or above {project_path!r}", is_error=True)
     subprocess.run([str(PROTOCOL_HEADER_SH), "sync", str(protocol)], capture_output=True, timeout=15)
     proc = subprocess.run(
         [str(PROTOCOL_HEADER_SH), "emit", str(protocol)],
@@ -139,7 +139,7 @@ def call_protocol_search(args: dict) -> dict:
         return text_result(f"Unknown mode {mode!r}; expected hypotheses|incidents|phase|grep", is_error=True)
     protocol = find_protocol(project_path)
     if protocol is None:
-        return text_result(f"No SCIENTIFIC_PROTOCOL.md found at or above {project_path!r}", is_error=True)
+        return text_result(f"No EVIDENCE_PROTOCOL.md found at or above {project_path!r}", is_error=True)
     cmd = [str(PROTOCOL_SEARCH_SH), mode, str(protocol)]
     if mode == "grep":
         pattern = args.get("pattern")

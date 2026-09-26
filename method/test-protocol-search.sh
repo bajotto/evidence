@@ -22,7 +22,7 @@ cat > "$FIXTURE" <<'EOF'
 **Current phase:** 2
 <!-- PROTOCOL-HEADER:END -->
 
-# demo-project — Scientific Protocol
+# demo-project — Evidence Protocol
 
 ## 1. Testable hypotheses
 

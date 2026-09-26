@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sets up Trae IDE delivery for one project: static rules
-# (.trae/rules/scientific-method.md) plus service-mode MCP registration.
+# (.trae/rules/evidence.md) plus service-mode MCP registration.
 # Trae has no documented hook/session-start mechanism at all (confirmed
 # absent, not just unverified — see README.md), so unlike claude/, devin/,
 # codex/, and cursor/, there is no "optional hook, opt in yourself" section
@@ -24,9 +24,9 @@ python3 "$SCRIPT_DIR/hooks/write-trae-mcp-config.py" \
   "$PROJECT_DIR/.trae/mcp.json" \
   "$METHOD_DIR/service/protocol_mcp_server.py"
 
-if [ ! -f "$PROJECT_DIR/SCIENTIFIC_PROTOCOL.md" ]; then
+if [ ! -f "$PROJECT_DIR/EVIDENCE_PROTOCOL.md" ]; then
   echo
-  echo "NOTE: no SCIENTIFIC_PROTOCOL.md in $PROJECT_DIR yet — copy"
+  echo "NOTE: no EVIDENCE_PROTOCOL.md in $PROJECT_DIR yet — copy"
   echo "      $METHOD_DIR/PROJECT_PROTOCOL_TEMPLATE.md there and fill it in."
   echo "      Re-run this script afterward to pick up its real content."
 fi

@@ -1,6 +1,6 @@
-# scientific-method-ai — Scientific Protocol
+# evidence — Evidence Protocol
 
-This project follows its own method on itself: `method/SCIENTIFIC_METHOD.md`
+This project follows its own method on itself: `method/EVIDENCE.md`
 and `method/ENFORCEMENT_MODEL.md` are the canonical docs; this file is the
 running record for the repo's own development, using
 `method/PROJECT_PROTOCOL_TEMPLATE.md` as its structure.
@@ -8,7 +8,7 @@ running record for the repo's own development, using
 <!-- PROTOCOL-HEADER:START -->
 # PROTOCOL HEADER — READ FIRST
 This is the authoritative current-state summary. The full protocol body is the source of history and evidence.
-**Project:** scientific-method-ai
+**Project:** evidence
 **Current phase:** 4
 **Last updated (body):** 2026-09-26
 **Current status (body):** Phase 4 (Monitor) — PR #1 open against `main`, all local tests green, watching for CI/review.
@@ -56,7 +56,7 @@ Installed next to this script (protocol-header.sh) by install.sh — same direct
 ## 1. Testable hypotheses
 
 ### H1: full-text search removes the need to read the whole protocol body
-- **H0 (null):** An agent must read the entire `SCIENTIFIC_PROTOCOL.md` body
+- **H0 (null):** An agent must read the entire `EVIDENCE_PROTOCOL.md` body
   to answer "what happened in Phase 2" or "has this failure occurred before" —
   infeasible once the body is large (one real project's reached ~722KB).
 - **H1 (alternative):** `method/protocol-search.sh`'s four subcommands
@@ -147,7 +147,7 @@ Installed next to this script (protocol-header.sh) by install.sh — same direct
 ### H6: protocol-header.sh's sync/check/emit are correct once fixed
 - **H0 (null):** `sync`, `check`, and `emit` behave correctly on a real
   project protocol (prose before the header, `Phase N` headings present,
-  a title in the template's own "name — Scientific Protocol" convention).
+  a title in the template's own "name — Evidence Protocol" convention).
 - **H1 (alternative):** After four fixes this cycle (header duplication, a
   Python-version-dependent crash, preamble leaking into `emit`, and
   `**Project:**` showing the generic title suffix instead of the real
@@ -160,7 +160,7 @@ Installed next to this script (protocol-header.sh) by install.sh — same direct
   with unrelated preceding prose; `**Project:**` matches the actual
   project name.
 - **Status:** ✅ validated (12/12, `method/test-protocol-header.sh`,
-  2026-09-26) — including against this repo's own `SCIENTIFIC_PROTOCOL.md`,
+  2026-09-26) — including against this repo's own `EVIDENCE_PROTOCOL.md`,
   not only the template fixture.
 
 ---
@@ -214,7 +214,7 @@ code that produced it.
 review, and (eventually) a real Cursor/Trae install if one becomes
 reachable from this environment.
 **Status:** ongoing
-**Findings so far:** PR #1 (`bajotto/scientific-method-ai`) open against
+**Findings so far:** PR #1 (`bajotto/evidence`) open against
 `main`, draft, subscribed for CI/review events. No CI configured in this
 repository as of this writing (0 check runs on the head commit) — "green"
 currently means the local test suites above, not a CI badge.
@@ -303,13 +303,13 @@ script and reasoning about it.
 ### Incident: 2026-09-26 (e) — Project: showed the generic suffix, not the project name
 **What happened:** Found while writing *this file*: running
 `protocol-header.sh sync` on this repo's own freshly-written
-`SCIENTIFIC_PROTOCOL.md` (titled "# scientific-method-ai — Scientific
+`EVIDENCE_PROTOCOL.md` (titled "# evidence — Scientific
 Protocol", per the template's own convention) produced a header whose
-`**Project:**` line read "Scientific Protocol" — the generic document type,
-not "scientific-method-ai."
+`**Project:**` line read "Evidence Protocol" — the generic document type,
+not "evidence."
 **Root cause:** `project_name()` matched the title against
 `^#\s+(.+?)(?:\s+—\s+|\s+-\s+)([^\n]+)$` — group 1 is the project name,
-group 2 is the generic suffix ("Scientific Protocol") — and returned
+group 2 is the generic suffix ("Evidence Protocol") — and returned
 `match.group(2)` instead of `match.group(1)`. No existing test asserted on
 the `**Project:**` value at all, so this had shipped silently through
 Incidents (a)–(d) above without being caught.
@@ -320,7 +320,7 @@ most direct route available: actually using the tool on a real file for
 its real purpose (documenting this very session), not by auditing the
 code. Writing this protocol *was* Phase 4 monitoring in miniature; the
 method caught a defect in its own tooling by being applied, which is the
-entire premise of `SCIENTIFIC_METHOD.md`'s "test it and record the
+entire premise of `EVIDENCE.md`'s "test it and record the
 result" anti-pattern row.
 
 ### Incident: 2026-09-26 (f) — hypotheses status silently truncated on wrapped prose

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sets up Cursor delivery for one project: the confirmed-safe static rule
-# (.cursor/rules/scientific-method.mdc) plus service-mode MCP registration.
+# (.cursor/rules/evidence.mdc) plus service-mode MCP registration.
 # Does NOT install the sessionStart hook — see hooks/session-start-protocol.sh
 # and README.md for why that one is opt-in only.
 #
@@ -26,9 +26,9 @@ python3 "$SCRIPT_DIR/hooks/write-cursor-mcp-config.py" \
   "$PROJECT_DIR/.cursor/mcp.json" \
   "$METHOD_DIR/service/protocol_mcp_server.py"
 
-if [ ! -f "$PROJECT_DIR/SCIENTIFIC_PROTOCOL.md" ]; then
+if [ ! -f "$PROJECT_DIR/EVIDENCE_PROTOCOL.md" ]; then
   echo
-  echo "NOTE: no SCIENTIFIC_PROTOCOL.md in $PROJECT_DIR yet — copy"
+  echo "NOTE: no EVIDENCE_PROTOCOL.md in $PROJECT_DIR yet — copy"
   echo "      $METHOD_DIR/PROJECT_PROTOCOL_TEMPLATE.md there and fill it in."
   echo "      Re-run this script afterward to pick up its real content."
 fi

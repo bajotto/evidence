@@ -19,7 +19,7 @@ fail() { echo "FAIL: $1"; FAIL=$((FAIL + 1)); }
 
 PROJ="$(mktemp -d)"
 trap 'rm -rf "$PROJ"' EXIT
-cp "$TEMPLATE" "$PROJ/SCIENTIFIC_PROTOCOL.md"
+cp "$TEMPLATE" "$PROJ/EVIDENCE_PROTOCOL.md"
 
 run_session() {
   python3 "$SERVER"
@@ -95,7 +95,7 @@ echo "$L6" | grep -q '"error"' && pass "unknown tool name returns a JSON-RPC err
 L7="$(get_line 7)"
 echo "$L7" | grep -q '"error"' && pass "server survives a malformed line and answers the next request" || fail "server did not recover after a malformed line"
 
-# --- protocol_header on a path with no SCIENTIFIC_PROTOCOL.md ---
+# --- protocol_header on a path with no EVIDENCE_PROTOCOL.md ---
 L8="$(get_line 8)"
 echo "$L8" | grep -q '"isError": true' && pass "protocol_header reports isError when no protocol file exists" || fail "protocol_header did not report isError for a missing protocol"
 

@@ -22,7 +22,7 @@ same "declare always-on or it's Layer 1" shape as the `.windsurf/rules/*.md`
 gotcha `../devin/README.md` found by testing.
 
 [`hooks/sync-cursor-rules.sh`](hooks/sync-cursor-rules.sh) generates
-`.cursor/rules/scientific-method.mdc` from the canonical method docs and the
+`.cursor/rules/evidence.mdc` from the canonical method docs and the
 project's current `PROTOCOL-HEADER`, the same derive-from-canonical-source
 pattern as `../claude/hooks/sync-windsurf-rules.sh`.
 
@@ -43,7 +43,7 @@ that the server itself speaks correct MCP — see
 [`../method/service/test-protocol-mcp-server.sh`](../method/service/test-protocol-mcp-server.sh).
 
 [`hooks/write-cursor-mcp-config.py`](hooks/write-cursor-mcp-config.py)
-merges the `scientific-method` entry into whatever `mcp.json` already
+merges the `evidence` entry into whatever `mcp.json` already
 exists, idempotently, without touching other servers already registered
 there.
 
@@ -75,8 +75,8 @@ confirming it works on your installed version.
 ./install.sh /path/to/project
 ```
 
-Generates the project's `.cursor/rules/scientific-method.mdc` and registers
-the `scientific-method` MCP server in that project's `.cursor/mcp.json`.
+Generates the project's `.cursor/rules/evidence.mdc` and registers
+the `evidence` MCP server in that project's `.cursor/mcp.json`.
 Re-run any time — both steps are idempotent.
 
 ## What this does and does not guarantee

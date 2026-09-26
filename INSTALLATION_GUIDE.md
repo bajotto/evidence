@@ -14,7 +14,7 @@ This repo's protocol delivery works in two complementary modes. This guide expla
 | **Best for** | Single agent, single machine | Multiple agents sharing one server, or MCP-only agent |
 | **Setup complexity** | Simple: one `install.sh` call | Simple: one `install.sh` call, plus start the server |
 
-**Both modes read the same `SCIENTIFIC_PROTOCOL.md`. They do not conflict — you can run both at the same time.**
+**Both modes read the same `EVIDENCE_PROTOCOL.md`. They do not conflict — you can run both at the same time.**
 
 ---
 
@@ -24,7 +24,7 @@ This repo's protocol delivery works in two complementary modes. This guide expla
 
 1. Your agent (Claude Code, Devin, Cursor, etc.) starts a session
 2. A **hook** or **static rule** runs automatically
-3. Reads `SCIENTIFIC_PROTOCOL.md` and extracts the current header
+3. Reads `EVIDENCE_PROTOCOL.md` and extracts the current header
 4. Injects the header into that session's context
 5. Session ends, hook ends — no background process
 
@@ -60,7 +60,7 @@ cd /path/to/this/repo
 Each script:
 - Copies the method docs to your project
 - Sets up the hook (Claude, Devin) or static rules (Cursor, Codex, Trae)
-- Creates `SCIENTIFIC_PROTOCOL.md` from the template if you don't have one
+- Creates `EVIDENCE_PROTOCOL.md` from the template if you don't have one
 - Is **idempotent** — safe to run multiple times
 
 ### Verification
@@ -71,7 +71,7 @@ grep -r "protocol-header.sh" ~/.claude/hooks/
 # or check your IDE's hook config
 
 # Cursor
-cat /path/to/your/project/.cursor/rules/scientific-method.mdc | head -5
+cat /path/to/your/project/.cursor/rules/evidence.mdc | head -5
 # should start with: ---
 # alwaysApply: true
 
@@ -93,7 +93,7 @@ rm ~/.devin/hooks/protocol-header.sh ~/.devin/hooks/session-start-protocol-devin
 
 **Cursor:**
 ```bash
-rm /path/to/your/project/.cursor/rules/scientific-method.mdc
+rm /path/to/your/project/.cursor/rules/evidence.mdc
 ```
 
 **Codex:**
@@ -103,7 +103,7 @@ rm /path/to/your/project/AGENTS.md  # if it was only used for the method
 
 **Trae:**
 ```bash
-rm /path/to/your/project/.trae/rules/scientific-method.md
+rm /path/to/your/project/.trae/rules/evidence.md
 ```
 
 ---
@@ -137,8 +137,8 @@ rm /path/to/your/project/.trae/rules/scientific-method.md
 **Step 1: Copy the server to a stable location**
 
 ```bash
-mkdir -p ~/.scientific-method-ai
-cp /path/to/repo/method/service/protocol_mcp_server.py ~/.scientific-method-ai/
+mkdir -p ~/.evidence
+cp /path/to/repo/method/service/protocol_mcp_server.py ~/.evidence/
 ```
 
 **Step 2: Register with your agent(s)**
@@ -150,7 +150,7 @@ cd /path/to/your/project
 # This creates .cursor/mcp.json with the server registered
 
 # Codex (global)
-codex mcp add scientific-method -- python3 ~/.scientific-method-ai/protocol_mcp_server.py
+codex mcp add evidence -- python3 ~/.evidence/protocol_mcp_server.py
 
 # Trae (per-project)
 cd /path/to/your/project
@@ -160,17 +160,17 @@ cd /path/to/your/project
 **Step 3: Start the server**
 
 ```bash
-python3 ~/.scientific-method-ai/protocol_mcp_server.py
+python3 ~/.evidence/protocol_mcp_server.py
 ```
 
 **To keep it running in the background:**
 ```bash
 # macOS / Linux
-nohup python3 ~/.scientific-method-ai/protocol_mcp_server.py > ~/.scientific-method-ai/server.log 2>&1 &
-echo $! > ~/.scientific-method-ai/server.pid
+nohup python3 ~/.evidence/protocol_mcp_server.py > ~/.evidence/server.log 2>&1 &
+echo $! > ~/.evidence/server.pid
 
 # Or with systemd (Linux)
-# Create ~/.config/systemd/user/scientific-method-mcp.service
+# Create ~/.config/systemd/user/evidence-mcp.service
 # (see "Systemd setup" below)
 ```
 
@@ -182,20 +182,20 @@ ps aux | grep protocol_mcp_server.py
 
 # Test a request (in another terminal)
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test"}}}' | \
-  python3 ~/.scientific-method-ai/protocol_mcp_server.py 2>/dev/null | head -5
+  python3 ~/.evidence/protocol_mcp_server.py 2>/dev/null | head -5
 ```
 
 ### Systemd setup (Linux, optional but recommended)
 
-**Create `~/.config/systemd/user/scientific-method-mcp.service`:**
+**Create `~/.config/systemd/user/evidence-mcp.service`:**
 ```ini
 [Unit]
-Description=Scientific Method MCP Server
+Description=Evidence MCP Server
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=%h/.scientific-method-ai/protocol_mcp_server.py
+ExecStart=%h/.evidence/protocol_mcp_server.py
 Restart=on-failure
 RestartSec=5
 
@@ -205,22 +205,22 @@ WantedBy=default.target
 
 **Enable and start:**
 ```bash
-systemctl --user enable scientific-method-mcp
-systemctl --user start scientific-method-mcp
-systemctl --user status scientific-method-mcp
+systemctl --user enable evidence-mcp
+systemctl --user start evidence-mcp
+systemctl --user status evidence-mcp
 ```
 
 **View logs:**
 ```bash
-journalctl --user -u scientific-method-mcp -f
+journalctl --user -u evidence-mcp -f
 ```
 
 ### To disable service mode later
 
 **Remove the server**:
 ```bash
-rm ~/.scientific-method-ai/protocol_mcp_server.py
-rm ~/.config/systemd/user/scientific-method-mcp.service 2>/dev/null
+rm ~/.evidence/protocol_mcp_server.py
+rm ~/.config/systemd/user/evidence-mcp.service 2>/dev/null
 systemctl --user daemon-reload 2>/dev/null
 ```
 
@@ -230,7 +230,7 @@ systemctl --user daemon-reload 2>/dev/null
 rm /path/to/your/project/.cursor/mcp.json
 
 # Codex: 
-codex config rm mcp_servers.scientific-method
+codex config rm mcp_servers.evidence
 
 # Trae:
 rm /path/to/your/project/.trae/mcp.json
@@ -258,7 +258,7 @@ rm /path/to/your/project/.trae/mcp.json
 - You have a mix of cloud and local agents
 - You want flexibility to switch modes
 
-**Both run on the same `SCIENTIFIC_PROTOCOL.md` and never conflict.**
+**Both run on the same `EVIDENCE_PROTOCOL.md` and never conflict.**
 
 ---
 
@@ -279,15 +279,15 @@ rm /path/to/your/project/.trae/mcp.json
 ## Troubleshooting
 
 ### "Protocol not found"
-- **Standalone:** Did you copy `method/PROJECT_PROTOCOL_TEMPLATE.md` to `SCIENTIFIC_PROTOCOL.md` in your project?
+- **Standalone:** Did you copy `method/PROJECT_PROTOCOL_TEMPLATE.md` to `EVIDENCE_PROTOCOL.md` in your project?
 - **Service:** Is the server running? `ps aux | grep protocol_mcp_server`
 
 ### "Hook not running" (Standalone)
 - **Claude Code:** Check `~/.claude/hooks/` — script should be there
 - **Devin:** Check `~/.devin/hooks/` — script should be there
-- **Cursor:** Check `{project}/.cursor/rules/scientific-method.mdc`
+- **Cursor:** Check `{project}/.cursor/rules/evidence.mdc`
 - **Codex:** Check `{project}/AGENTS.md` and run `codex config trust {project}`
-- **Trae:** Check `{project}/.trae/rules/scientific-method.md`
+- **Trae:** Check `{project}/.trae/rules/evidence.md`
 
 ### "MCP server not responding" (Service)
 ```bash
@@ -296,14 +296,14 @@ ps aux | grep protocol_mcp_server.py
 
 # Restart it
 pkill -f protocol_mcp_server.py
-python3 ~/.scientific-method-ai/protocol_mcp_server.py
+python3 ~/.evidence/protocol_mcp_server.py
 ```
 
 ### "Protocol is stale" (Service)
 The server caches nothing — each request reads the file. If it feels stale:
 ```bash
 # Verify the file has the latest content
-cat /path/to/project/SCIENTIFIC_PROTOCOL.md | head -30
+cat /path/to/project/EVIDENCE_PROTOCOL.md | head -30
 ```
 
 ---
@@ -312,9 +312,9 @@ cat /path/to/project/SCIENTIFIC_PROTOCOL.md | head -30
 
 1. **Choose your mode** using the table above
 2. **Run the install script** for your agent
-3. **Copy the protocol template**: `cp method/PROJECT_PROTOCOL_TEMPLATE.md /your/project/SCIENTIFIC_PROTOCOL.md`
+3. **Copy the protocol template**: `cp method/PROJECT_PROTOCOL_TEMPLATE.md /your/project/EVIDENCE_PROTOCOL.md`
 4. **Verify** (see "Verification" sections above for your mode)
-5. **Read the method**: [`method/SCIENTIFIC_METHOD.md`](method/SCIENTIFIC_METHOD.md)
+5. **Read the method**: [`method/EVIDENCE.md`](method/EVIDENCE.md)
 6. **Update your protocol** as you work — both modes read the same file
 
 ---
@@ -327,7 +327,7 @@ If you're an agent running a setup flow:
 2. **If they don't know:** default to **standalone** (simpler, zero daemon)
 3. **Run the appropriate `install.sh`:**
    ```bash
-   cd /path/to/scientific-method-ai
+   cd /path/to/evidence
    ./{tool}/install.sh /path/to/their/project
    ```
 4. **Verify it worked:**
@@ -335,15 +335,15 @@ If you're an agent running a setup flow:
    - Service: Run the server, test with the verification commands above
 5. **Ask them to copy the template:**
    ```bash
-   cp method/PROJECT_PROTOCOL_TEMPLATE.md /their/project/SCIENTIFIC_PROTOCOL.md
+   cp method/PROJECT_PROTOCOL_TEMPLATE.md /their/project/EVIDENCE_PROTOCOL.md
    ```
-6. **Point them to** `method/SCIENTIFIC_METHOD.md` to read how to use it
+6. **Point them to** `method/EVIDENCE.md` to read how to use it
 
 ---
 
 ## See also
 
 - [`README.md`](README.md) — overview of the entire repo
-- [`method/SCIENTIFIC_METHOD.md`](method/SCIENTIFIC_METHOD.md) — how to write and maintain a protocol
+- [`method/EVIDENCE.md`](method/EVIDENCE.md) — how to write and maintain a protocol
 - [`method/ENFORCEMENT_MODEL.md`](method/ENFORCEMENT_MODEL.md) — why delivery mode matters
 - `{tool}/README.md` (e.g., `cursor/README.md`) — agent-specific tested behavior and gotchas
