@@ -1,6 +1,6 @@
 # The Enforcement Model: Text, Delivery, and Guarantee Are Three Different Problems
 
-`SCIENTIFIC_METHOD.md` tells you how to validate that a system's output is
+`EVIDENCE.md` tells you how to validate that a system's output is
 correct. This document is about a different, harder problem: how to make
 sure a *rule about the system* — "always validate X before scaling," "never
 enroll a lead who was already contacted" — actually gets applied, instead of
@@ -74,7 +74,7 @@ A delivery mechanism can be installed, enabled, firing on every session — and
 still deliver nothing. Two real defects in this repository's own hook, both
 found in production use on 2026-09-22, had that shape:
 
-- The hook resolved the project protocol as `$CWD/SCIENTIFIC_PROTOCOL.md`, with
+- The hook resolved the project protocol as `$CWD/EVIDENCE_PROTOCOL.md`, with
   no walk up the tree. Sessions that started in a subdirectory of the repo got
   no protocol. The `[ -f ]` test simply failed and the hook moved on.
 - `protocol-header.sh` drained stdin unconditionally, so it blocked whenever a

@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Install the scientific method's Codex hooks globally.
+# Install Evidence's Codex hooks globally.
 set -euo pipefail
 
 CODEX_DIR="${CODEX_DIR:-$HOME/.codex}"
 HOOKS_DIR="$CODEX_DIR/hooks"
-DOCS_DIR="$CODEX_DIR/scientific-method"
+DOCS_DIR="$CODEX_DIR/evidence"
 HOOKS_CONFIG="$CODEX_DIR/hooks.json"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 METHOD_DIR="$(cd "$SCRIPT_DIR/../method" && pwd)"
 mkdir -p "$HOOKS_DIR" "$DOCS_DIR"
 
-for doc in SCIENTIFIC_METHOD.md ENFORCEMENT_MODEL.md; do
+for doc in EVIDENCE.md ENFORCEMENT_MODEL.md; do
   source="$METHOD_DIR/$doc"
   dest="$DOCS_DIR/$doc"
   if [ -f "$dest" ] && ! diff -q "$source" "$dest" >/dev/null 2>&1; then
@@ -50,7 +50,7 @@ def add(event, command, status=None):
         group["matcher"] = ""
     groups.append(group)
 
-add("SessionStart", session_cmd, "Loading scientific method protocol...")
+add("SessionStart", session_cmd, "Loading evidence protocol...")
 add("UserPromptSubmit", header_cmd)
 add("PostToolUse", header_cmd)
 with open(dst, "w", encoding="utf-8") as f:

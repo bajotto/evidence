@@ -1,4 +1,4 @@
-# Scientific Method for AI-Assisted Work
+# Evidence for AI-Assisted Work
 
 A reusable structure for validating what an AI agent produces, and for
 making the rules about *how* it works actually stick, instead of living
@@ -21,7 +21,7 @@ codex/     Implementation for Codex: global lifecycle hooks that inject
 
 ## Start here
 
-1. Read [`method/SCIENTIFIC_METHOD.md`](method/SCIENTIFIC_METHOD.md) — how
+1. Read [`method/EVIDENCE.md`](method/EVIDENCE.md) — how
    to validate what your AI-driven system produces, in phases, with
    explicit acceptance criteria. Its `PROTOCOL-HEADER` rule keeps current
    phase, gates, and a body index readable even when protocol history is huge.
@@ -30,7 +30,7 @@ codex/     Implementation for Codex: global lifecycle hooks that inject
    three layers (text, forced delivery, code enforcement) that close that
    gap, one at a time.
 3. Copy [`method/PROJECT_PROTOCOL_TEMPLATE.md`](method/PROJECT_PROTOCOL_TEMPLATE.md)
-   into your project as `SCIENTIFIC_PROTOCOL.md` and keep it updated as you
+   into your project as `EVIDENCE_PROTOCOL.md` and keep it updated as you
    work.
 4. Set up delivery for your tool: [`claude/`](claude/), [`devin/`](devin/),
    or [`codex/`](codex/).

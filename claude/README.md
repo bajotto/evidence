@@ -18,7 +18,7 @@ on someone opening the link.
 is a hook that fires on every session start, in every project, on this
 machine — and injects the method documents directly into the agent's
 context before it takes any action. It also auto-detects and injects a
-project's own `SCIENTIFIC_PROTOCOL.md` if one exists at the project root,
+project's own `EVIDENCE_PROTOCOL.md` if one exists at the project root,
 with no per-project setup.
 
 The hook injects only the bounded `PROTOCOL-HEADER` for the project protocol,

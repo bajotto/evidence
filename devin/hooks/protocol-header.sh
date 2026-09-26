@@ -175,9 +175,9 @@ def protocol_for(data):
         p = Path(candidate)
         if not p.is_absolute():
             p = cwd / p
-        if p.name == "SCIENTIFIC_PROTOCOL.md":
+        if p.name == "EVIDENCE_PROTOCOL.md":
             return p
-    return cwd / "SCIENTIFIC_PROTOCOL.md"
+    return cwd / "EVIDENCE_PROTOCOL.md"
 
 
 def hook():

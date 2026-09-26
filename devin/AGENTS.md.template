@@ -11,7 +11,7 @@
 ## Critical rules
 
 The rules below caused, or nearly caused, a real incident in this project.
-Full detail: `SCIENTIFIC_PROTOCOL.md`.
+Full detail: `EVIDENCE_PROTOCOL.md`.
 
 1. **[Your highest-cost failure mode].** [What to do instead, and why.]
 2. **[Second rule, if you have one].** [Same structure.]
@@ -29,12 +29,12 @@ Full detail: `SCIENTIFIC_PROTOCOL.md`.
 
 ## Method
 
-This project follows the scientific method in
-`method/SCIENTIFIC_METHOD.md` and the enforcement model in
+This project follows Evidence, described in
+`method/EVIDENCE.md`, and the enforcement model in
 `method/ENFORCEMENT_MODEL.md` (adjust paths to wherever you vendor this
 repo's `method/` folder). The running protocol for this project is in
-`SCIENTIFIC_PROTOCOL.md`, based on `method/PROJECT_PROTOCOL_TEMPLATE.md`.
+`EVIDENCE_PROTOCOL.md`, based on `method/PROJECT_PROTOCOL_TEMPLATE.md`.
 
 Before scaling any action beyond a 3-5 case pilot, confirm Phase 2 passed
-100% and get explicit approval — see `SCIENTIFIC_METHOD.md` for the full
+100% and get explicit approval — see `EVIDENCE.md` for the full
 phase structure.

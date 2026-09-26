@@ -8,7 +8,7 @@
 # not assumed from documentation).
 #
 # Injects the global method docs into every session, on every project on
-# this machine. Also injects <project>/SCIENTIFIC_PROTOCOL.md if the
+# this machine. Also injects <project>/EVIDENCE_PROTOCOL.md if the
 # current project (detected from cwd) has one.
 #
 # This guarantees DELIVERY, not compliance — see ../../method/ENFORCEMENT_MODEL.md.
@@ -18,10 +18,10 @@ STDIN_JSON="$(cat 2>/dev/null || true)"
 CWD="$(printf '%s' "$STDIN_JSON" | jq -r '.cwd // empty' 2>/dev/null || true)"
 if [ -z "$CWD" ]; then CWD="$(pwd)"; fi
 
-DEVIN_DOCS_DIR="${DEVIN_DOCS_DIR:-$HOME/.devin/scientific-method}"
+DEVIN_DOCS_DIR="${DEVIN_DOCS_DIR:-$HOME/.devin/evidence}"
 
 GLOBAL_FILES=(
-  "$DEVIN_DOCS_DIR/SCIENTIFIC_METHOD.md"
+  "$DEVIN_DOCS_DIR/EVIDENCE.md"
   "$DEVIN_DOCS_DIR/ENFORCEMENT_MODEL.md"
   "$DEVIN_DOCS_DIR/ENFORCEMENT_CHECKLIST.md"
   "$DEVIN_DOCS_DIR/README_SESSIONS.md"
@@ -46,13 +46,13 @@ done
 find_project_protocol() {
   _d="$1"
   while [ -n "$_d" ] && [ "$_d" != "/" ]; do
-    if [ -f "$_d/SCIENTIFIC_PROTOCOL.md" ]; then
-      printf '%s\n' "$_d/SCIENTIFIC_PROTOCOL.md"
+    if [ -f "$_d/EVIDENCE_PROTOCOL.md" ]; then
+      printf '%s\n' "$_d/EVIDENCE_PROTOCOL.md"
       return 0
     fi
     _d="$(dirname "$_d")"
   done
-  [ -f "/SCIENTIFIC_PROTOCOL.md" ] && printf '%s\n' "/SCIENTIFIC_PROTOCOL.md" && return 0
+  [ -f "/EVIDENCE_PROTOCOL.md" ] && printf '%s\n' "/EVIDENCE_PROTOCOL.md" && return 0
   return 1
 }
 PROJECT_PROTOCOL="$(find_project_protocol "$CWD" || true)"
@@ -76,6 +76,6 @@ Header unavailable; read the full file with the read tool: $PROJECT_PROTOCOL"
 fi
 
 # Use stdin instead of --arg to avoid ARG_MAX overflow on large protocols
-# (e.g. a project SCIENTIFIC_PROTOCOL.md can be >700KB, exceeding the OS
+# (e.g. a project EVIDENCE_PROTOCOL.md can be >700KB, exceeding the OS
 # argument limit when passed via jq --arg "$CONTEXT").
 printf '%s' "$CONTEXT" | jq -R -n --rawfile ctx /dev/stdin '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}'

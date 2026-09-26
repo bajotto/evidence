@@ -23,7 +23,7 @@ mkdir -p "$HOOKS_DIR"
 
 # 1. Copy the global docs (warn instead of overwriting if a different
 #    version already exists — don't silently clobber local edits)
-for doc in SCIENTIFIC_METHOD.md ENFORCEMENT_MODEL.md; do
+for doc in EVIDENCE.md ENFORCEMENT_MODEL.md; do
   dest="$CLAUDE_DIR/$doc"
   if [ -f "$dest" ] && ! diff -q "$METHOD_DIR/$doc" "$dest" >/dev/null 2>&1; then
     echo "WARNING: $dest already exists and differs from this package — not overwriting."
@@ -79,7 +79,7 @@ jq --arg cmd "$HOOK_CMD" '
           type: "command",
           command: $cmd,
           timeout: 15,
-          statusMessage: "Loading mandatory scientific method protocol..."
+          statusMessage: "Loading mandatory evidence protocol..."
         }]
       }]
     end
