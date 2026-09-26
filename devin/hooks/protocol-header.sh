@@ -141,9 +141,13 @@ def check(path):
         errors.append("expected exactly one START and END marker")
     elif text.index(START) > text.index(END):
         errors.append("START marker must precede END marker")
-    if text[: text.find(END) + len(END)].count("\n") > 80:
-        errors.append("header must end within first 80 lines")
     header = text[text.find(START): text.find(END) + len(END)] if START in text and END in text else ""
+    # Measured against the header block itself (START..END), not file-start..END:
+    # a project's own prose before the header (the template invites exactly this —
+    # "Copy this file into the root of your project...") must not count against the
+    # header's own bound, and must not leak into what emit hands to an agent.
+    if header.count("\n") > 80:
+        errors.append("header must end within first 80 lines")
     if len(header.encode()) > MAX_BYTES:
         errors.append(f"header exceeds {MAX_BYTES} bytes")
     for label in ("Project", "Current phase", "Last updated", "Current status", "Phase index", "Body index"):
@@ -227,7 +231,16 @@ if command in {"sync", "check", "emit"}:
         sys.exit(sync(path))
     if command == "check":
         sys.exit(check(path))
-    print(path.read_text(encoding="utf-8").split(END, 1)[0] + END)
+    # emit: only the header block (START..END), never whatever precedes it.
+    # A file-start..END slice used to be printed instead, which meant any
+    # prose before the header (the project template itself carries some —
+    # see the same startswith() bug this fixed in sync()) leaked into every
+    # hook injection instead of the bounded header alone.
+    emit_text = path.read_text(encoding="utf-8")
+    if START in emit_text and END in emit_text:
+        print(emit_text[emit_text.index(START): emit_text.index(END) + len(END)])
+    else:
+        print(emit_text.split(END, 1)[0] + END)
     sys.exit(0)
 elif command == "hook":
     sys.exit(hook())

@@ -61,6 +61,16 @@ AFTER_HASH=$(sha256sum "$FIXTURE" | cut -d' ' -f1)
 echo "$OUT" | grep -q "UNCHANGED" && pass "sync reports UNCHANGED on the idempotent run" \
                                    || fail "sync did not report UNCHANGED on the idempotent run"
 
+# --- emit must return only the header block, not file-start..END (the template ---
+# --- itself carries prose before the header, which used to leak into every hook) ---
+EMIT_OUT=$("$HEADER" emit "$FIXTURE" 2>&1)
+echo "$EMIT_OUT" | grep -q "Copy this file into the root of your project" \
+  && fail "emit leaked the prose preceding the header" \
+  || pass "emit does not leak the prose preceding the header"
+echo "$EMIT_OUT" | head -1 | grep -q "PROTOCOL-HEADER:START" \
+  && pass "emit's first line is the header START marker" \
+  || fail "emit's first line is not the header START marker"
+
 # --- phase index must list real titles, not raise, and use correct line numbers ---
 OUT=$("$HEADER" emit "$FIXTURE" 2>&1)
 echo "$OUT" | grep -q "Phase 1 — Discovery (line" && pass "phase index lists Phase 1 with a line number" \
