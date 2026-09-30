@@ -25,6 +25,9 @@ The hook injects only the bounded `PROTOCOL-HEADER` for the project protocol,
 not an arbitrary head slice of its history. The header carries current phase,
 status, phase/body indexes, and the approval gates; the full protocol remains
 available for detailed evidence.
+The per-prompt and per-tool hooks find the protocol by searching upward from the
+working directory, and the header includes a maintained `PROTOCOL-NOW` block and
+a recent-log list (see `method/EVIDENCE.md`).
 
 Install it:
 

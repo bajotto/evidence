@@ -21,11 +21,24 @@ This is the authoritative current-state summary. The full protocol body is the s
 5. Read the full body before acting; this header intentionally does not replace history.
 
 ## Phase index (details are in the full body)
-- Phase 1 — Discovery (line 127)
-- Phase 2 — Pilot (line 138)
-- Phase 3 — Scale (line 151)
-- Phase 4 — Monitor (line 169)
-- Current phase details: search the full body for `Phase 4`; line numbers above are body offsets.
+- Phase 1 — Discovery (line 188)
+- Phase 2 — Pilot (line 199)
+- Phase 3 — Scale (line 212)
+- Phase 4 — Monitor (line 230)
+- Current phase details: search the file for `Phase 4`.
+
+## Now (maintained each session — trust this over the status line above)
+- As of 2026-09-30. Phase 3 (incident log) records (g)–(i): hook subdirectory lookup, Now block + Recent log, real line numbers — all in `method/protocol-header.sh` and its `claude/`, `devin/` copies.
+- Suites green on this branch: test-protocol-header 17/17, test-protocol-search 19/19, claude/hooks/test-hooks.sh. Central-service work is separate and uncommitted.
+- Rewrite this block at the end of every session that changes the repo.
+
+## Recent log (newest last, line numbers are real file lines)
+- 2026-09-26 — install.sh never shipped protocol-search.sh (line 303)
+- 2026-09-26 — Project: showed the generic suffix, not the project name (line 321)
+- 2026-09-26 — hypotheses status silently truncated on wrapped prose (line 344)
+- 2026-09-30 — the per-prompt hook injected nothing from a subdirectory (line 376)
+- 2026-09-30 — the header was current in form and stale in content (line 393)
+- 2026-09-30 — header line numbers were wrong by the header's own length (line 416)
 
 ## Non-negotiable gates
 - Phase 1 is read-only discovery; Phase 2 must test 3–5 real cases.
@@ -34,10 +47,10 @@ This is the authoritative current-state summary. The full protocol body is the s
 - Do not claim production confirmation without running the confirming query.
 
 ## Body index
-- 1. Testable hypotheses (line 13)
-- 2. Phases (line 125)
-- 3. Incident log (line 181)
-- 4. Checklist for the next session (line 317)
+- 1. Testable hypotheses (line 74)
+- 2. Phases (line 186)
+- 3. Incident log (line 242)
+- 4. Checklist for the next session (line 435)
 
 ## Full-text search (do not read the whole body just to find one thing)
 Installed next to this script (protocol-header.sh) by install.sh — same directory.
@@ -48,6 +61,11 @@ Installed next to this script (protocol-header.sh) by install.sh — same direct
 
 **Next action:** read the body, verify the current phase/status, then state the session start before acting.
 <!-- PROTOCOL-HEADER:END -->
+<!-- PROTOCOL-NOW:START -->
+- As of 2026-09-30. Phase 3 (incident log) records (g)–(i): hook subdirectory lookup, Now block + Recent log, real line numbers — all in `method/protocol-header.sh` and its `claude/`, `devin/` copies.
+- Suites green on this branch: test-protocol-header 17/17, test-protocol-search 19/19, claude/hooks/test-hooks.sh. Central-service work is separate and uncommitted.
+- Rewrite this block at the end of every session that changes the repo.
+<!-- PROTOCOL-NOW:END -->
 **Last updated:** 2026-09-26
 **Status:** Phase 4 (Monitor) — PR #1 open against `main`, all local tests green, watching for CI/review.
 
@@ -354,6 +372,63 @@ found does not, by itself, prove the fix is general — it proves the fix
 handles that one fixture. Trying the fix against at least one real,
 independently-authored document (this repo's own new file, in this case)
 before calling it fixed is what caught the gap the fixture couldn't.
+
+### Incident: 2026-09-30 (g) — the per-prompt hook injected nothing from a subdirectory
+**What happened:** In a real project whose sessions start in a subdirectory,
+one level below the repo root that holds `EVIDENCE_PROTOCOL.md`, the user
+asked whether the protocol was being read on every call. Running
+`protocol-header.sh hook` by hand with that working directory returned `"additionalContext": ""` — for every prompt and every
+tool call. Only the SessionStart hook, which already walks up the tree,
+delivered anything.
+**Root cause:** `protocol_for()` returned `cwd / "EVIDENCE_PROTOCOL.md"`
+with no upward search, unlike `session-start-protocol-global.sh`. No test
+ran the hook from anywhere but the project root.
+**Fixed by:** search `cwd` and its parents for the nearest
+`EVIDENCE_PROTOCOL.md`. Test: `hook finds the protocol from a subdirectory
+of the project`.
+**Lesson:** two hooks that resolve the same file must share one resolution
+rule; the gap was only visible by running the hook from the directory a
+session really starts in.
+
+### Incident: 2026-09-30 (h) — the header was current in form and stale in content
+**What happened:** The header of the same project reported
+`Current phase: 1` while its status said Phase 2 (Pilot) was in progress,
+an empty phase index ("No Phase headings found", because phases are written
+as bold `**Phase N — …**` lead-ins, not `###` headings), and a status
+paragraph that stopped at 2026-09-23 while the log ran to 2026-09-29. The
+header validated PASS throughout: `check` proves the header matches the
+body's hand-written `Status`, not that the `Status` is current.
+**Root cause:** the header derived everything from one hand-maintained
+paragraph; `phase_from()` took the first "Phase N" it found; nothing derived
+state from the dated log, and nothing flagged staleness.
+**Fixed by:** phase = highest "Phase N" in the status; phase index also
+matches bold `**Phase N —` lead-ins; a **Recent log** section from the last
+six dated entries (four entry formats, incl. `### Incident: date (x) —`); a **Now** block injected verbatim,
+with a warning when its `as of` date is older than the newest log entry or
+absent. Tests: stale-Now warning, Now injection, log entry listing.
+**Lesson:** a validator that only checks the header against its own source
+cannot detect a stale source. Staleness needs a second, independent signal
+(here: the newest dated log entry) compared against the first.
+**Open:** the Now block is still hand-written; it is only as current as the
+session that last rewrote it. The warning makes forgetting visible, not
+impossible.
+
+### Incident: 2026-09-30 (i) — header line numbers were wrong by the header's own length
+**What happened:** Section and phase indexes were computed on the body with
+the header removed, so every `(line N)` pointed `N + header-length` lines
+above the real line (`3. PHASES (line 1554)` for a heading on line 1595).
+Found while fixing (h). A first fix added the header length but also the
+length of any prose *before* the header — which is already part of the
+body's line count — so files with a preamble (this repo's template has one)
+came out 8 lines off. That second bug was caught only by the new test, run
+against the template fixture; the project it was first tried on has no
+preamble and looked correct.
+**Fixed by:** `sync` builds the header twice — once to learn its length,
+once with that length as the offset (the line count does not depend on the
+numbers). Test: `header line numbers point at the real file line`.
+**Lesson:** the same as (e): the fix that "worked" was verified against the
+one document that happened to hide the bug. A fixture with a preamble is
+the independent document.
 
 ---
 

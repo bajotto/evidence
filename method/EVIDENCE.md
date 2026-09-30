@@ -40,6 +40,24 @@ validate it after protocol edits, including edits made through opaque shell
 commands. A passing header proves accurate delivery of current state; it does
 not prove that the agent followed the method.
 
+Beyond the minimum, the generated header also carries:
+
+- a **Now** block: a few lines the agent rewrites at the end of every session
+  that touches a real system, kept between `<!-- PROTOCOL-NOW:START -->` and
+  `<!-- PROTOCOL-NOW:END -->` right after the header and injected verbatim
+  (capped at 1800 bytes). It needs an `as of YYYY-MM-DD`; the header warns when
+  that date is older than the newest dated log entry, or when it is missing.
+  The hand-written `Status` line goes stale unnoticed — the Now block and the
+  warning are what keep the injected state current;
+- a **Recent log** of the last six dated entries (`### YYYY-MM-DD —`,
+  `**YYYY-MM-DD —`, `YYYY-MM-DD (n) —`, or `### Incident: YYYY-MM-DD (x) —`); and
+- phase and section line numbers that are real lines of the file, not offsets
+  into the body.
+
+The per-prompt hook searches upward from the working directory for the nearest
+`EVIDENCE_PROTOCOL.md`, so sessions started in a subdirectory of a project
+still receive its header.
+
 ## The method
 
 ### 1. State a falsifiable hypothesis
