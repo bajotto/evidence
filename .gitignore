@@ -1,0 +1,3 @@
+# Generated Windsurf rules — machine-specific output of claude/hooks/sync-windsurf-rules.sh
+# (contains local paths/hosts; never commit)
+.windsurf/
