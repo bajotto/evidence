@@ -64,7 +64,7 @@ cat > "$FIXTURE" <<'EOF'
 **Goal:** validate hypotheses against 3-5 real cases.
 **Status:** complete, 2026-08-01
 **Result:** 12/12 pass
-**Approval to scale:** granted, pedro, 2026-08-02
+**Approval to scale:** granted, owner, 2026-08-02
 
 ## 3. Incident log
 

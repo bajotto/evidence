@@ -8,7 +8,9 @@ set -uo pipefail
 HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
 SYNC="$HOOKS_DIR/sync-windsurf-rules.sh"
 SESSION_START="$HOOKS_DIR/session-start-protocol-global.sh"
-GLOBAL_RULES="/home/main/.codeium/windsurf/memories/global_rules.md"
+GLOBAL_RULES="${WINDSURF_GLOBAL:-$HOME/.codeium/windsurf/memories/global_rules.md}"
+CANONICAL_DIR="${EVIDENCE_CANONICAL_DIR:-$HOME/.claude}"
+REPO_ROOT="$(cd "$HOOKS_DIR/../.." && pwd)"
 
 PASS=0
 FAIL=0
@@ -17,10 +19,19 @@ pass() { echo "PASS: $1"; PASS=$((PASS+1)); }
 assert_contains() { grep -q "$2" "$1" && pass "$3" || fail "$3"; }
 assert_not_contains() { ! grep -q "$2" "$1" && pass "$3" || fail "$3"; }
 
+# Tests 1-3 exercise sync-windsurf-rules.sh against the canonical MDs.
+# Without an installed canonical dir there is nothing to extract — skip.
+SKIP_SYNC=0
+if [ ! -f "$CANONICAL_DIR/EVIDENCE.md" ]; then
+  echo "SKIP: no $CANONICAL_DIR/EVIDENCE.md — sync tests 1-3 skipped"
+  SKIP_SYNC=1
+fi
+
 # --- 1. sync-windsurf-rules.sh: no empty sections (Bug 1 regression) ---
 # An empty section looks like "### Title\n\n### Next" — grep for two headers
 # separated only by a blank line. If extract_section returns nothing, the
 # section header is immediately followed by another header.
+if [ "$SKIP_SYNC" -eq 1 ]; then :; else
 bash "$SYNC" >/dev/null 2>&1
 EMPTY_SECTIONS=$(grep -c '^### .*$$' "$GLOBAL_RULES" | head -1)
 # Better: count headers, then count headers that are followed (within 2 lines)
@@ -64,14 +75,19 @@ for i in "${!SECTIONS[@]}"; do
 done
 
 # --- 3. sync-windsurf-rules.sh: auto-discovers projects (Bug 2 regression) ---
-# Re-run and capture stdout, count "=== Project:" lines
-OUTPUT=$(bash "$SYNC" 2>/dev/null)
+# Fixture: two fake projects under a temp EVIDENCE_PROJECTS_DIR.
+PROJ_TMP=$(mktemp -d)
+mkdir -p "$PROJ_TMP/p1" "$PROJ_TMP/p2"
+touch "$PROJ_TMP/p1/EVIDENCE_PROTOCOL.md" "$PROJ_TMP/p2/EVIDENCE_PROTOCOL.md"
+OUTPUT=$(EVIDENCE_PROJECTS_DIR="$PROJ_TMP" bash "$SYNC" 2>/dev/null)
 PROJECT_COUNT=$(echo "$OUTPUT" | grep -c '=== Project:')
-[ "$PROJECT_COUNT" -ge 5 ] && pass "auto-discovered $PROJECT_COUNT projects (>=5)" \
-                            || fail "only $PROJECT_COUNT projects discovered (Bug 2 regression)"
+rm -rf "$PROJ_TMP"
+[ "$PROJECT_COUNT" -eq 2 ] && pass "auto-discovered $PROJECT_COUNT projects (expected 2)" \
+                           || fail "only $PROJECT_COUNT projects discovered (Bug 2 regression)"
+fi
 
 # --- 4. session-start-protocol-global.sh: produces valid JSON ---
-JSON=$(echo '{"cwd":"/home/main/code/evidence"}' | bash "$SESSION_START" 2>/dev/null)
+JSON=$(printf '{"cwd":"%s"}' "$REPO_ROOT" | bash "$SESSION_START" 2>/dev/null)
 echo "$JSON" | jq -e '.hookSpecificOutput.hookEventName == "SessionStart"' >/dev/null 2>&1 \
   && pass "session-start produces valid JSON with SessionStart event" \
   || fail "session-start JSON invalid"
@@ -86,7 +102,7 @@ esac
 # --- 6. protocol-header.sh: generates a bounded, readable, indexed header ---
 HEADER="$HOOKS_DIR/protocol-header.sh"
 FIXTURE=$(mktemp)
-cp /home/main/code/managd/EVIDENCE_PROTOCOL.md "$FIXTURE"
+cp "$REPO_ROOT/EVIDENCE_PROTOCOL.md" "$FIXTURE"
 BEFORE=$(sha256sum "$FIXTURE" | cut -d' ' -f1)
 bash "$HEADER" sync "$FIXTURE" >/dev/null 2>&1 && pass "header sync succeeds" || fail "header sync failed"
 bash "$HEADER" check "$FIXTURE" >/dev/null 2>&1 && pass "header check succeeds" || fail "header check failed"
@@ -99,7 +115,7 @@ AFTER2=$(sha256sum "$FIXTURE" | cut -d' ' -f1)
 rm -f "$FIXTURE"
 
 # --- 7. protocol-header.sh: injects current state on every prompt ---
-PROMPT_JSON=$(printf '%s' '{"cwd":"/home/main/code/jobs-agent","hook_event_name":"UserPromptSubmit"}' | bash "$HEADER" hook 2>/dev/null)
+PROMPT_JSON=$(printf '{"cwd":"%s","hook_event_name":"UserPromptSubmit"}' "$REPO_ROOT" | bash "$HEADER" hook 2>/dev/null)
 PROMPT_CONTEXT=$(echo "$PROMPT_JSON" | jq -r '.hookSpecificOutput.additionalContext')
 echo "$PROMPT_JSON" | jq -e '.hookSpecificOutput.hookEventName == "UserPromptSubmit"' >/dev/null 2>&1 \
   && pass "UserPromptSubmit produces valid hook output" || fail "UserPromptSubmit output invalid"
@@ -110,14 +126,14 @@ esac
 
 # --- 8. protocol-header.sh: PostToolUse auto-syncs protocol edits ---
 POST_FIXTURE=$(mktemp)
-cp /home/main/code/managd/EVIDENCE_PROTOCOL.md "$POST_FIXTURE"
+cp "$REPO_ROOT/EVIDENCE_PROTOCOL.md" "$POST_FIXTURE"
 rm -f "$POST_FIXTURE.tmp"
 printf '%s' "{\"cwd\":\"/tmp\",\"hook_event_name\":\"PostToolUse\",\"tool_name\":\"edit\",\"tool_input\":{\"file_path\":\"$POST_FIXTURE\"}}" | bash "$HEADER" hook >/dev/null 2>&1
 bash "$HEADER" check "$POST_FIXTURE" >/dev/null 2>&1 && pass "PostToolUse keeps edited protocol valid" || fail "PostToolUse did not validate protocol"
 rm -f "$POST_FIXTURE"
 
 # --- 9. session-start-protocol-global.sh: current header replaces body cap ---
-JOBS_JSON=$(echo '{"cwd":"/home/main/code/jobs-agent"}' | bash "$SESSION_START" 2>/dev/null)
+JOBS_JSON=$(printf '{"cwd":"%s"}' "$REPO_ROOT" | bash "$SESSION_START" 2>/dev/null)
 JOBS_CONTEXT=$(echo "$JOBS_JSON" | jq -r '.hookSpecificOutput.additionalContext')
 case "$JOBS_CONTEXT" in
   *'CURRENT PROTOCOL HEADER'*'## Phase index'*) pass "SessionStart injects readable header for large protocol";;
