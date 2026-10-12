@@ -21,11 +21,22 @@ This is the authoritative current-state summary. The full protocol body is the s
 5. Read the full body before acting; this header intentionally does not replace history.
 
 ## Phase index (details are in the full body)
-- Phase 1 — Discovery (line 127)
-- Phase 2 — Pilot (line 138)
-- Phase 3 — Scale (line 151)
-- Phase 4 — Monitor (line 169)
-- Current phase details: search the full body for `Phase 4`; line numbers above are body offsets.
+- Phase 1 — Discovery (line 181)
+- Phase 2 — Pilot (line 192)
+- Phase 3 — Scale (line 205)
+- Phase 4 — Monitor (line 223)
+- Current phase details: search the file for `Phase 4`.
+
+## Now (maintained each session — trust this over the status line above)
+No PROTOCOL-NOW block in the body — add one right after the header (START/END comment markers named PROTOCOL-NOW).
+
+## Recent log (newest last, line numbers are real file lines)
+- 2026-09-26 — PROTOCOL-HEADER duplicated on sync (line 237)
+- 2026-09-26 — every subcommand crashed on Python 3.11 (line 257)
+- 2026-09-26 — emit leaked preamble into every hook injection (line 274)
+- 2026-09-26 — install.sh never shipped protocol-search.sh (line 296)
+- 2026-09-26 — Project: showed the generic suffix, not the project name (line 314)
+- 2026-09-26 — hypotheses status silently truncated on wrapped prose (line 337)
 
 ## Non-negotiable gates
 - Phase 1 is read-only discovery; Phase 2 must test 3–5 real cases.
@@ -34,10 +45,10 @@ This is the authoritative current-state summary. The full protocol body is the s
 - Do not claim production confirmation without running the confirming query.
 
 ## Body index
-- 1. Testable hypotheses (line 13)
-- 2. Phases (line 125)
-- 3. Incident log (line 181)
-- 4. Checklist for the next session (line 317)
+- 1. Testable hypotheses (line 67)
+- 2. Phases (line 179)
+- 3. Incident log (line 235)
+- 4. Checklist for the next session (line 371)
 
 ## Full-text search (do not read the whole body just to find one thing)
 Installed next to this script (protocol-header.sh) by install.sh — same directory.

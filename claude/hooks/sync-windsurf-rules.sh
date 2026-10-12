@@ -12,8 +12,8 @@
 # when content changes).
 set -euo pipefail
 
-CANONICAL_DIR="/home/main/.claude"
-WINDSURF_GLOBAL="/home/main/.codeium/windsurf/memories/global_rules.md"
+CANONICAL_DIR="${EVIDENCE_CANONICAL_DIR:-$HOME/.claude}"
+WINDSURF_GLOBAL="${WINDSURF_GLOBAL:-$HOME/.codeium/windsurf/memories/global_rules.md}"
 GLOBAL_METHOD="$CANONICAL_DIR/GLOBAL_EVIDENCE.md"
 EVIDENCE_METHOD="$CANONICAL_DIR/EVIDENCE.md"
 README_SESSIONS="$CANONICAL_DIR/README_SESSIONS.md"
@@ -21,16 +21,29 @@ ENFORCEMENT="$CANONICAL_DIR/ENFORCEMENT_CHECKLIST.md"
 LOG_FILE="$CANONICAL_DIR/hooks/sync-windsurf-rules.log"
 HEADER_SCRIPT="$CANONICAL_DIR/hooks/protocol-header.sh"
 
+# Projects live under this dir; override if your layout differs.
+PROJECTS_DIR="${EVIDENCE_PROJECTS_DIR:-$HOME/code}"
+
+# SSH rule lines live OUTSIDE this repo in $CANONICAL_DIR/SSH_HOSTS.md —
+# they name real hosts/IPs and must not be committed. One bullet per line.
+ssh_rules() {
+  if [ -f "$CANONICAL_DIR/SSH_HOSTS.md" ]; then
+    cat "$CANONICAL_DIR/SSH_HOSTS.md"
+  else
+    echo "- ssh <user>@<host> — define yours in $CANONICAL_DIR/SSH_HOSTS.md"
+  fi
+}
+
 # Rotate log if > 1MB (cron appends indefinitely otherwise)
 if [ -f "$LOG_FILE" ] && [ "$(wc -c < "$LOG_FILE")" -gt 1048576 ]; then
   mv "$LOG_FILE" "$LOG_FILE.1"
 fi
 
-# Auto-discover projects: any dir under /home/main/code with a EVIDENCE_PROTOCOL.md
+# Auto-discover projects: any dir under $PROJECTS_DIR with a EVIDENCE_PROTOCOL.md
 PROJECTS=()
 while IFS= read -r p; do
   PROJECTS+=("$(dirname "$p")")
-done < <(find /home/main/code -maxdepth 2 -name EVIDENCE_PROTOCOL.md 2>/dev/null)
+done < <(find "$PROJECTS_DIR" -maxdepth 2 -name EVIDENCE_PROTOCOL.md 2>/dev/null)
 
 # --- Helper: extract a markdown section at any header level ----------
 # Matches the first header line matching $2 (regex), outputs until the next
@@ -82,7 +95,7 @@ generate_global() {
     echo "# Global Rules — Windsurf/Cascade"
     echo ""
     echo "## SSH"
-    echo "- ssh always use the format ssh main@IP (192.168.1.21,22,23,25)"
+    ssh_rules
     echo ""
     echo "## Evidence — MANDATORY (every session, every project)"
     echo ""
@@ -173,11 +186,11 @@ generate_project() {
     echo "## Method: hypotheses & acceptance criteria"
     extract_section "$GLOBAL_METHOD" "Fase 0"
     echo ""
-    echo "## Multi-server tasks (21, 22, 23, 25)"
+    echo "## Multi-server tasks"
     extract_section "$ENFORCEMENT" "Multi-Server Inventory Check"
     echo ""
     echo "## SSH"
-    echo "- ssh main@IP for 192.168.1.21, 22, 23, 25"
+    ssh_rules
   } > "$tmp"
   write_if_changed "$rule_file" "$tmp"
   check_limit "$rule_file" 12000 "project rule" || true
