@@ -91,3 +91,15 @@ Same distinction as every other implementation in this repo: confirming
 `AGENTS.md` is delivered under a trusted project is not the same as
 confirming Codex acts on what it read. That is Layer 3 territory — see
 [`../method/ENFORCEMENT_MODEL.md`](../method/ENFORCEMENT_MODEL.md).
+
+## Central service integration (pilot)
+
+The unified installer can configure a project-scoped remote MCP entry and add central-service guidance to `AGENTS.md`:
+
+```bash
+python3 evidence_install.py project --target /path/to/project --agent codex \
+  --service-url https://your-service.example/mcp --project-slug your-project \
+  --confirm-project-linked --dry-run
+```
+
+Review before applying. Codex only loads project MCP/config for trusted projects; the installer never changes trust. Remote OAuth against this service is not yet verified end-to-end. The existing global `codex/install.sh` remains the standalone/local setup.

@@ -109,7 +109,8 @@ case "$PROMPT_CONTEXT" in
 esac
 
 # --- 8. protocol-header.sh: PostToolUse auto-syncs protocol edits ---
-POST_FIXTURE=$(mktemp)
+POST_DIR=$(mktemp -d)
+POST_FIXTURE="$POST_DIR/EVIDENCE_PROTOCOL.md"  # the hook only acts on files with this exact name
 cp /path/to/project/EVIDENCE_PROTOCOL.md "$POST_FIXTURE"
 rm -f "$POST_FIXTURE.tmp"
 printf '%s' "{\"cwd\":\"/tmp\",\"hook_event_name\":\"PostToolUse\",\"tool_name\":\"edit\",\"tool_input\":{\"file_path\":\"$POST_FIXTURE\"}}" | bash "$HEADER" hook >/dev/null 2>&1
@@ -192,9 +193,30 @@ echo '{"hook_event_name":"SessionStart"}' | timeout 8 bash "$HDR" >/dev/null 2>&
                || fail "protocol-header.sh hook mode broke on stdin"
 
 # --- N+2. method/ copy is executable (README tells you to start there) ---
-[ -x "$HOOKS_DIR/../../method/protocol-header.sh" ] \
-  && pass "method/protocol-header.sh is executable" \
-  || fail "method/protocol-header.sh is not executable"
+# This test runs both from the source checkout (claude/hooks/) and after
+# install.sh copies it into ~/.claude/hooks/. Resolve the canonical source in
+# either layout instead of assuming the installed script has the checkout's
+# relative directory structure.
+METHOD_HEADER="${EVIDENCE_METHOD_HEADER:-}"
+if [ -z "$METHOD_HEADER" ]; then
+  for candidate in \
+    "$HOOKS_DIR/../../method/protocol-header.sh" \
+    "$HOME/code/evidence/method/protocol-header.sh"; do
+    if [ -f "$candidate" ]; then
+      METHOD_HEADER="$candidate"
+      break
+    fi
+  done
+fi
+if [ -n "$METHOD_HEADER" ]; then
+  [ -x "$METHOD_HEADER" ] \
+    && pass "canonical method/protocol-header.sh is executable" \
+    || fail "canonical method/protocol-header.sh is not executable: $METHOD_HEADER"
+else
+  [ -x "$HEADER" ] \
+    && pass "installed protocol-header.sh is executable (source checkout unavailable)" \
+    || fail "installed protocol-header.sh is not executable: $HEADER"
+fi
 
 rm -rf "$PROTO_TMP"
 

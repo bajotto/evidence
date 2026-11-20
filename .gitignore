@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.egg-info/
+evidence-server/
+
+# Instance-specific material: never push. Put real hostnames, IPs, deploy notes and credentials here.
+.env.*
+!.env.example
+method/service/STAGING-COOLIFY.md
+private/
+/access.md
+.public-safe-deny

@@ -1,349 +1,91 @@
-# Installation Guide: Standalone vs. Service Mode
+# Installation Guide
 
-This repo's protocol delivery works in two complementary modes. This guide explains what each one does, which to choose, and how to install and configure them.
+Evidence has two deployment models. **Standalone** keeps the protocol in each project's `EVIDENCE_PROTOCOL.md`. **Central service** stores the authoritative protocol in PostgreSQL and exposes it to agents through authenticated remote MCP. The central path is currently a pilot implementation, not a production service.
 
-## The two modes at a glance
+## Standalone setup
 
-| Aspect | Standalone | Service (MCP) |
-|--------|-----------|---------------|
-| **What it is** | Hooks or static rules injected per-session | One persistent process handling all requests |
-| **How it runs** | Runs when your agent starts a session | Runs in the background (you start it once) |
-| **Speed** | Fresh read every time (slightly slower) | Caches answer (slightly faster) |
-| **Dependencies** | None — uses your agent's own hook/rule API | Requires Python 3.9+ to run the server |
-| **Offline** | ✅ Works offline | ✅ Works offline (both local) |
-| **Best for** | Single agent, single machine | Multiple agents sharing one server, or MCP-only agent |
-| **Setup complexity** | Simple: one `install.sh` call | Simple: one `install.sh` call, plus start the server |
+Choose this for local/offline work without a central database. Keep one `EVIDENCE_PROTOCOL.md` in each project; it is the project's source of truth.
 
-**Both modes read the same `EVIDENCE_PROTOCOL.md`. They do not conflict — you can run both at the same time.**
-
----
-
-## Mode 1: Standalone (recommended for most projects)
-
-### What happens
-
-1. Your agent (Claude Code, Devin, Cursor, etc.) starts a session
-2. A **hook** or **static rule** runs automatically
-3. Reads `EVIDENCE_PROTOCOL.md` and extracts the current header
-4. Injects the header into that session's context
-5. Session ends, hook ends — no background process
-
-### Pros
-- ✅ Zero daemon to manage
-- ✅ Always reads the latest protocol (never stale)
-- ✅ Works completely offline
-- ✅ No extra Python process
-- ✅ Same tool.yaml or rules config already familiar to you
-
-### Cons
-- ⊘ Slightly slower (file read + parse per session)
-- ⊘ Each agent needs its own adapter (claude/, devin/, cursor/, etc.)
-
-### Installation
-
-**For Claude Code or Devin:**
-```bash
-cd /path/to/this/repo
-./claude/install.sh /path/to/your/project
-# or
-./devin/install.sh /path/to/your/project
-```
-
-**For Cursor, Codex, or Trae:**
-```bash
-cd /path/to/this/repo
-./cursor/install.sh /path/to/your/project
-# or ./codex/install.sh /path/to/your/project
-# or ./trae/install.sh /path/to/your/project
-```
-
-Each script:
-- Copies the method docs to your project
-- Sets up the hook (Claude, Devin) or static rules (Cursor, Codex, Trae)
-- Creates `EVIDENCE_PROTOCOL.md` from the template if you don't have one
-- Is **idempotent** — safe to run multiple times
-
-### Verification
+From the Evidence checkout:
 
 ```bash
-# Claude Code
-grep -r "protocol-header.sh" ~/.claude/hooks/
-# or check your IDE's hook config
-
-# Cursor
-cat /path/to/your/project/.cursor/rules/evidence.mdc | head -5
-# should start with: ---
-# alwaysApply: true
-
-# Devin / Codex / Trae
-# Similar static-rule checks per tool
+./claude/install.sh   # Claude Code hooks; global for this machine
+./devin/install.sh    # Devin CLI hooks; global for this machine
+./codex/install.sh    # Codex CLI docs/MCP registration; global for this machine
+./cursor/install.sh /absolute/path/to/project
+./trae/install.sh /absolute/path/to/project
 ```
 
-### To disable standalone mode later
+Claude, Devin, and Codex scripts configure machine-level integration; they do not install into the supplied project directory. Cursor and Trae take a project directory. These scripts are retained for standalone/legacy local stdio behavior and do not configure the central remote database.
 
-**Claude Code:**
-```bash
-rm ~/.claude/hooks/protocol-header.sh ~/.claude/hooks/session-start-protocol-global.sh
-```
+## Central self-hosted service (pilot only)
 
-**Devin:**
-```bash
-rm ~/.devin/hooks/protocol-header.sh ~/.devin/hooks/session-start-protocol-devin.sh
-```
+The software is MIT-licensed and can be self-hosted without a license fee. Hosting, DNS, TLS/reverse proxy, Google OAuth administration, backups, and operations are not provided for free by this repository. The Compose bundle includes Keycloak 26.6.4, but does not automatically configure a realm, Google OAuth client, identity provider, or client-registration policies. Do not expose it publicly until Google federation is configured and live client tests pass.
 
-**Cursor:**
-```bash
-rm /path/to/your/project/.cursor/rules/evidence.mdc
-```
-
-**Codex:**
-```bash
-rm /path/to/your/project/AGENTS.md  # if it was only used for the method
-```
-
-**Trae:**
-```bash
-rm /path/to/your/project/.trae/rules/evidence.md
-```
-
----
-
-## Mode 2: Service (MCP) — for shared servers or multiple agents
-
-### What happens
-
-1. You **start the MCP server once** (or keep it running):
-   ```bash
-   python3 /path/to/repo/method/service/protocol_mcp_server.py
-   ```
-2. Your **MCP-capable agent** (Cursor, Codex CLI, Trae, or Claude Desktop) **registers** the server in its config
-3. Whenever the agent needs the protocol, it **calls the server** instead of re-reading the file
-4. The server **responds immediately** with the current header or search results
-5. Server keeps running until you stop it
-
-### Pros
-- ✅ One process for multiple agents (on the same machine)
-- ✅ Slightly faster (answers are immediate, no re-parsing)
-- ✅ True "service" architecture — agents never call hooks directly
-- ✅ Easy to extend (add more tools to the MCP server)
-
-### Cons
-- ⊘ Requires managing a background process
-- ⊘ If server crashes, agents lose access (but they can still fall back to the protocol file)
-- ⊘ Needs Python 3.9+ on your machine
-
-### Installation
-
-**Step 1: Copy the server to a stable location**
+### 1. Prepare the service directory
 
 ```bash
-mkdir -p ~/.evidence
-cp /path/to/repo/method/service/protocol_mcp_server.py ~/.evidence/
+python3 evidence_install.py server --target /srv/evidence --dry-run
+python3 evidence_install.py server --target /srv/evidence
+cd /srv/evidence/evidence-server
+cp .env.example .env
 ```
 
-**Step 2: Register with your agent(s)**
+The installer writes the app bundle, two private PostgreSQL services, Keycloak, Compose, and non-secret `.env.example` under `evidence-server/`. It does not start Docker, overwrite differing files, change firewall/DNS, or install host services. Edit `.env` with unique database and Keycloak admin passwords plus public OIDC/MCP URLs and allowed hosts. Keep `.env` out of Git and restrict its file permissions.
+
+Configure DNS/TLS and a reverse proxy for both `OIDC_PUBLIC_URL` and `MCP_PUBLIC_URL`. The local host ports are `127.0.0.1:8081` (Keycloak) and `127.0.0.1:8000` (MCP); neither PostgreSQL service has a host port. Review the rendered Compose config and network/firewall exposure before starting a public endpoint. Automated backup/restore is not implemented yet.
+
+After starting in staging, create the `evidence` Keycloak realm, register a Google OAuth Web client using `{OIDC_PUBLIC_URL}/realms/evidence/broker/google/endpoint` as its redirect URI, configure Google as the realm identity provider, and set the `evidence:access` and restricted `evidence:admin` scopes plus the `evidence-mcp` audience mapper. Configure client-registration/trusted-host policies using [Keycloak's MCP guidance](https://www.keycloak.org/securing-apps/mcp-authz-server); do not leave dynamic registration unrestricted. Keycloak's documented MCP conformance has version-specific gaps, so test actual clients before relying on it.
+
+### 2. Create or import the central project
+
+Connect an authenticated admin MCP client and call `protocol_create_project` with a unique project slug, name, and the reviewed protocol Markdown. This creates revision 1 and makes the caller the owner. For multiuser use, call `protocol_identity` to identify a user, then `protocol_add_member` to grant `owner`, `editor`, or `reader`; membership changes are audited. Never import a local protocol without previewing and approving its content.
+
+### 3. Install project integration in the exact folder
+
+The agent should first read this guide and the adapter, ask the user for the exact existing project directory, agent, service URL, and central project slug, then show a dry run:
 
 ```bash
-# Cursor (per-project)
-cd /path/to/your/project
-/path/to/repo/cursor/install.sh .
-# This creates .cursor/mcp.json with the server registered
-
-# Codex (global)
-codex mcp add evidence -- python3 ~/.evidence/protocol_mcp_server.py
-
-# Trae (per-project)
-cd /path/to/your/project
-/path/to/repo/trae/install.sh .
+python3 /path/to/evidence/evidence_install.py project \
+  --target /absolute/path/to/project \
+  --agent claude \
+  --service-url https://evidence.example.com/mcp \
+  --project-slug project-slug \
+  --confirm-project-linked \
+  --dry-run
 ```
 
-**Step 3: Start the server**
+Review every proposed path, then rerun without `--dry-run` only after approval. Accepted `--agent` values: `claude`, `devin`, `codex`, `cursor`, `trae`. It writes only project-level files, preserves unrelated config, refuses malformed/colliding config and symlink escapes, validates HTTPS URLs (no embedded credentials/query), and is idempotent. It does not silently trust Codex projects or modify global agent settings.
+
+Every project-mode install requires `--confirm-project-linked`: this is the operator's explicit confirmation that the central slug already exists. If a local `EVIDENCE_PROTOCOL.md` is present, it also confirms that its content was reviewed/imported centrally. The flag does not upload anything. The database remains authoritative; any local Markdown file is only a snapshot. Project-mode installation does not create database records. If it finds a known standalone Evidence rule that could conflict with central state, it stops without writing; review and convert/remove that rule manually. It never deletes existing rules.
+
+For Claude Code or Devin CLI, if a global standalone hook is installed, review and rerun that client's global installer from this checkout to deploy the central-aware hook. The project installer never changes global configuration.
+
+Project-level integration locations:
+
+| Agent | MCP config | Guidance/rule |
+|---|---|---|
+| Claude Code | `.mcp.json` | `.claude/rules/evidence-central.md` |
+| Devin CLI | `.devin/mcp_config.json` | `.windsurf/rules/evidence-central.md` |
+| Codex CLI | `.codex/config.toml` | managed section in `AGENTS.md` |
+| Cursor | `.cursor/mcp.json` | `.cursor/rules/evidence-central.mdc` |
+| Trae | `.trae/mcp.json` | `.trae/rules/evidence-central.md` |
+
+Codex only loads project config for trusted projects; the installer deliberately does not change trust. Remote OAuth behavior and actual tool calls still require end-to-end verification against each installed client version.
+
+## Validation commands
 
 ```bash
-python3 ~/.evidence/protocol_mcp_server.py
+python3 -m unittest -v test_evidence_install
+python3 -m unittest -v method.service.test_remote_service
+EVIDENCE_TEST_CONNINFO='host=... dbname=... user=... password=...' \
+  python3 -m unittest -v method.service.test_store
+bash method/test-protocol-header.sh
+bash method/test-protocol-search.sh
+bash method/service/test-protocol-mcp-server.sh
+bash method/test-central-hooks.sh
+bash cursor/test-cursor-adapter.sh
+bash trae/test-trae-adapter.sh
 ```
 
-**To keep it running in the background:**
-```bash
-# macOS / Linux
-nohup python3 ~/.evidence/protocol_mcp_server.py > ~/.evidence/server.log 2>&1 &
-echo $! > ~/.evidence/server.pid
-
-# Or with systemd (Linux)
-# Create ~/.config/systemd/user/evidence-mcp.service
-# (see "Systemd setup" below)
-```
-
-### Verification
-
-```bash
-# Check that the server is running
-ps aux | grep protocol_mcp_server.py
-
-# Test a request (in another terminal)
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test"}}}' | \
-  python3 ~/.evidence/protocol_mcp_server.py 2>/dev/null | head -5
-```
-
-### Systemd setup (Linux, optional but recommended)
-
-**Create `~/.config/systemd/user/evidence-mcp.service`:**
-```ini
-[Unit]
-Description=Evidence MCP Server
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=%h/.evidence/protocol_mcp_server.py
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=default.target
-```
-
-**Enable and start:**
-```bash
-systemctl --user enable evidence-mcp
-systemctl --user start evidence-mcp
-systemctl --user status evidence-mcp
-```
-
-**View logs:**
-```bash
-journalctl --user -u evidence-mcp -f
-```
-
-### To disable service mode later
-
-**Remove the server**:
-```bash
-rm ~/.evidence/protocol_mcp_server.py
-rm ~/.config/systemd/user/evidence-mcp.service 2>/dev/null
-systemctl --user daemon-reload 2>/dev/null
-```
-
-**Unregister from agents**:
-```bash
-# Cursor: delete .cursor/mcp.json or remove the entry
-rm /path/to/your/project/.cursor/mcp.json
-
-# Codex: 
-codex config rm mcp_servers.evidence
-
-# Trae:
-rm /path/to/your/project/.trae/mcp.json
-```
-
----
-
-## Choosing: standalone or service, or both?
-
-### Use **standalone only** if:
-- You work on one machine with one agent
-- You like zero background processes
-- Simplicity matters more than speed
-- You're offline often
-
-### Use **service only** if:
-- Multiple agents on the same machine need the protocol
-- You prefer a centralized architecture
-- Speed is important (slight optimization)
-- You're comfortable managing a background process
-
-### Use **both** (recommended for teams) if:
-- You want redundancy (if server crashes, agents still work via their own hooks)
-- You're using multiple agents (some have hooks, some only have MCP)
-- You have a mix of cloud and local agents
-- You want flexibility to switch modes
-
-**Both run on the same `EVIDENCE_PROTOCOL.md` and never conflict.**
-
----
-
-## Installation command reference
-
-| Agent | Standalone | Service | Command |
-|-------|-----------|---------|---------|
-| **Claude Code** | ✅ Hook | ✗ Not supported | `./claude/install.sh /project` |
-| **Devin** | ✅ Hook | ✗ Not supported | `./devin/install.sh /project` |
-| **Cursor** | ✅ Rules | ✅ MCP | `./cursor/install.sh /project` |
-| **Codex CLI** | ✅ AGENTS.md | ✅ MCP | `./codex/install.sh /project` |
-| **Trae IDE** | ✅ Rules | ✅ MCP | `./trae/install.sh /project` |
-
-**All `install.sh` scripts are idempotent** — safe to run multiple times.
-
----
-
-## Troubleshooting
-
-### "Protocol not found"
-- **Standalone:** Did you copy `method/PROJECT_PROTOCOL_TEMPLATE.md` to `EVIDENCE_PROTOCOL.md` in your project?
-- **Service:** Is the server running? `ps aux | grep protocol_mcp_server`
-
-### "Hook not running" (Standalone)
-- **Claude Code:** Check `~/.claude/hooks/` — script should be there
-- **Devin:** Check `~/.devin/hooks/` — script should be there
-- **Cursor:** Check `{project}/.cursor/rules/evidence.mdc`
-- **Codex:** Check `{project}/AGENTS.md` and run `codex config trust {project}`
-- **Trae:** Check `{project}/.trae/rules/evidence.md`
-
-### "MCP server not responding" (Service)
-```bash
-# Is it running?
-ps aux | grep protocol_mcp_server.py
-
-# Restart it
-pkill -f protocol_mcp_server.py
-python3 ~/.evidence/protocol_mcp_server.py
-```
-
-### "Protocol is stale" (Service)
-The server caches nothing — each request reads the file. If it feels stale:
-```bash
-# Verify the file has the latest content
-cat /path/to/project/EVIDENCE_PROTOCOL.md | head -30
-```
-
----
-
-## Next steps
-
-1. **Choose your mode** using the table above
-2. **Run the install script** for your agent
-3. **Copy the protocol template**: `cp method/PROJECT_PROTOCOL_TEMPLATE.md /your/project/EVIDENCE_PROTOCOL.md`
-4. **Verify** (see "Verification" sections above for your mode)
-5. **Read the method**: [`method/EVIDENCE.md`](method/EVIDENCE.md)
-6. **Update your protocol** as you work — both modes read the same file
-
----
-
-## For agents (Claude, Devin, Cursor, etc.)
-
-If you're an agent running a setup flow:
-
-1. **Ask the human which mode they prefer** (see "Choosing" section above)
-2. **If they don't know:** default to **standalone** (simpler, zero daemon)
-3. **Run the appropriate `install.sh`:**
-   ```bash
-   cd /path/to/evidence
-   ./{tool}/install.sh /path/to/their/project
-   ```
-4. **Verify it worked:**
-   - Standalone: Check hook/rule files exist
-   - Service: Run the server, test with the verification commands above
-5. **Ask them to copy the template:**
-   ```bash
-   cp method/PROJECT_PROTOCOL_TEMPLATE.md /their/project/EVIDENCE_PROTOCOL.md
-   ```
-6. **Point them to** `method/EVIDENCE.md` to read how to use it
-
----
-
-## See also
-
-- [`README.md`](README.md) — overview of the entire repo
-- [`method/EVIDENCE.md`](method/EVIDENCE.md) — how to write and maintain a protocol
-- [`method/ENFORCEMENT_MODEL.md`](method/ENFORCEMENT_MODEL.md) — why delivery mode matters
-- `{tool}/README.md` (e.g., `cursor/README.md`) — agent-specific tested behavior and gotchas
+The PostgreSQL integration test is skipped unless `EVIDENCE_TEST_CONNINFO` points to a disposable isolated test database. Passing unit tests and local database tests do not prove public deployment or live MCP OAuth/client compatibility.

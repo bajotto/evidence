@@ -86,3 +86,15 @@ for task-scoped context rather than persistent rules). This specific claim
 has **not** been independently tested the way the two mechanisms above
 were. Validate it yourself before relying on it, the same way the always-on
 mechanism was validated here instead of assumed.
+
+## Central service integration (pilot)
+
+For central PostgreSQL-backed protocols, use `../INSTALLATION_GUIDE.md` and the unified installer:
+
+```bash
+python3 evidence_install.py project --target /path/to/project --agent devin \
+  --service-url https://your-service.example/mcp --project-slug your-project \
+  --confirm-project-linked --dry-run
+```
+
+Review the generated `.devin/mcp_config.json` and project rule before rerunning without `--dry-run`. If the machine's global standalone hook is installed, rerun `./devin/install.sh` to install its central-aware version; it skips local protocol injection for central projects and adds a pointer to MCP. The hook does not fetch live state itself. Devin CLI's remote OAuth flow has not yet been verified end-to-end against this service.

@@ -92,6 +92,34 @@ echo "$OUT" | grep -q "Phase 2 — Pilot (line" && pass "phase index lists Phase
 echo "$OUT" | grep -q '\*\*Project:\*\* \[PROJECT_NAME\]$' && pass "Project: reports the actual project name" \
                                                             || fail "Project: reports the generic title suffix instead of the project name"
 
+# --- hook must find EVIDENCE_PROTOCOL.md from a subdirectory (it only checked $CWD) ---
+TREE="$(mktemp -d)"
+trap 'rm -rf "$TREE"; rm -f "$FIXTURE" "$FIXTURE.tmp"' EXIT
+mkdir -p "$TREE/sub/deeper"
+cp "$FIXTURE" "$TREE/EVIDENCE_PROTOCOL.md"
+HOOK_OUT=$(printf '{"cwd":"%s","hook_event_name":"UserPromptSubmit"}' "$TREE/sub/deeper" | "$HEADER" hook 2>&1)
+echo "$HOOK_OUT" | grep -q "PROTOCOL-HEADER:START" \
+  && pass "hook finds the protocol from a subdirectory of the project" \
+  || fail "hook injected nothing from a subdirectory of the project"
+
+# --- Now block is injected, and a stale 'as of' date is flagged against the newest log entry ---
+printf '\n<!-- PROTOCOL-NOW:START -->\n- As of 2000-01-01. Marker-now-line.\n<!-- PROTOCOL-NOW:END -->\n\n## 9. LINE CHECK\n\n2026-01-02 — newest entry\n' >> "$TREE/EVIDENCE_PROTOCOL.md"
+"$HEADER" sync "$TREE/EVIDENCE_PROTOCOL.md" >/dev/null 2>&1
+OUT=$("$HEADER" emit "$TREE/EVIDENCE_PROTOCOL.md" 2>&1)
+echo "$OUT" | grep -q "Marker-now-line" && pass "Now block is injected into the header" \
+                                        || fail "Now block missing from the header"
+echo "$OUT" | grep -q "NOW block is as of 2000-01-01 but the log has an entry from 2026-01-02" \
+  && pass "stale Now block is flagged against the newest log entry" \
+  || fail "stale Now block was not flagged"
+echo "$OUT" | grep -q "2026-01-02 — newest entry (line" && pass "recent log lists the dated entry" \
+                                                        || fail "recent log missing the dated entry"
+
+# --- line numbers in the header are real file lines, not body offsets ---
+N=$(echo "$OUT" | sed -n 's/^- 9\. LINE CHECK (line \([0-9]*\))$/\1/p')
+[ -n "$N" ] && [ "$(sed -n "${N}p" "$TREE/EVIDENCE_PROTOCOL.md")" = "## 9. LINE CHECK" ] \
+  && pass "header line numbers point at the real file line" \
+  || fail "header line number ${N:-<none>} does not point at '## 9. LINE CHECK'"
+
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1

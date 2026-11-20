@@ -65,3 +65,15 @@ any time — both steps are idempotent.
 Same distinction as every other implementation here: a rule file being
 present is not the same as Trae's agent acting on it every time — see
 [`../method/ENFORCEMENT_MODEL.md`](../method/ENFORCEMENT_MODEL.md).
+
+## Central service integration (pilot)
+
+The unified installer can configure project-scoped remote MCP and a project rule:
+
+```bash
+python3 evidence_install.py project --target /path/to/project --agent trae \
+  --service-url https://your-service.example/mcp --project-slug your-project \
+  --confirm-project-linked --dry-run
+```
+
+Review `.trae/mcp.json` and `.trae/rules/evidence-central.md` before applying. Trae's live OAuth calls against this service have not yet been verified end-to-end; the existing local stdio adapter is separate.

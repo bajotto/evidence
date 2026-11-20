@@ -10,8 +10,8 @@ running record for the repo's own development, using
 This is the authoritative current-state summary. The full protocol body is the source of history and evidence.
 **Project:** evidence
 **Current phase:** 4
-**Last updated (body):** 2026-09-26
-**Current status (body):** Phase 4 (Monitor) — PR #1 open against `main`, all local tests green, watching for CI/review.
+**Last updated (body):** 2026-09-27
+**Current status (body):** Phase 4 (Monitor) — central service deployed to Coolify @ <lan-host> (LAN staging, HTTP opt-in); full token→MCP E2E passed (auth, admin gating, revisions, stale-write rejection, audit). Google IdP, HTTPS, live clients, real-project pilot still pending.
 
 ## How to use this protocol
 1. Treat every claim as H0 (failure mode) vs H1 (expected result).
@@ -21,11 +21,22 @@ This is the authoritative current-state summary. The full protocol body is the s
 5. Read the full body before acting; this header intentionally does not replace history.
 
 ## Phase index (details are in the full body)
-- Phase 1 — Discovery (line 127)
-- Phase 2 — Pilot (line 138)
-- Phase 3 — Scale (line 151)
-- Phase 4 — Monitor (line 169)
-- Current phase details: search the full body for `Phase 4`; line numbers above are body offsets.
+- Phase 1 — Discovery (line 204)
+- Phase 2 — Pilot (line 215)
+- Phase 3 — Scale (line 228)
+- Phase 4 — Monitor (line 246)
+- Current phase details: search the file for `Phase 4`.
+
+## Now (maintained each session — trust this over the status line above)
+No PROTOCOL-NOW block in the body — add one right after the header (START/END comment markers named PROTOCOL-NOW).
+
+## Recent log (newest last, line numbers are real file lines)
+- 2026-09-26 — hypotheses status silently truncated on wrapped prose (line 441)
+- 2026-09-27 — psycopg3 rejected the container's conninfo (line 473)
+- 2026-09-27 — HTTPS-only issuer check broke loopback staging (line 489)
+- 2026-09-27 — LAN/HTTP URLs rejected outside loopback (line 504)
+- 2026-09-27 — Keycloak tokens arrived without `sub` (line 521)
+- 2026-09-27 — protocol body silently discarded on write (line 534)
 
 ## Non-negotiable gates
 - Phase 1 is read-only discovery; Phase 2 must test 3–5 real cases.
@@ -34,22 +45,22 @@ This is the authoritative current-state summary. The full protocol body is the s
 - Do not claim production confirmation without running the confirming query.
 
 ## Body index
-- 1. Testable hypotheses (line 13)
-- 2. Phases (line 125)
-- 3. Incident log (line 181)
-- 4. Checklist for the next session (line 317)
+- 1. Testable hypotheses (line 67)
+- 2. Phases (line 202)
+- 3. Incident log (line 339)
+- 4. Checklist for the next session (line 551)
 
 ## Full-text search (do not read the whole body just to find one thing)
-Installed next to this script (protocol-header.sh) by install.sh — same directory.
-- protocol-search.sh hypotheses FILE           — every H<n>, with its Status line
-- protocol-search.sh incidents FILE [PATTERN]  — incident log, optionally filtered
-- protocol-search.sh phase FILE N              — just that Phase section
-- protocol-search.sh grep FILE PATTERN          — free text, with enclosing section
+Search tool installed with this hook: `/home/main/.claude/hooks/protocol-search.sh`.
+- `/home/main/.claude/hooks/protocol-search.sh` hypotheses FILE           — every H<n>, with its Status line
+- `/home/main/.claude/hooks/protocol-search.sh` incidents FILE [PATTERN]  — incident log, optionally filtered
+- `/home/main/.claude/hooks/protocol-search.sh` phase FILE N              — just that Phase section
+- `/home/main/.claude/hooks/protocol-search.sh` grep FILE PATTERN          — free text, with enclosing section
 
 **Next action:** read the body, verify the current phase/status, then state the session start before acting.
 <!-- PROTOCOL-HEADER:END -->
-**Last updated:** 2026-09-26
-**Status:** Phase 4 (Monitor) — PR #1 open against `main`, all local tests green, watching for CI/review.
+**Last updated:** 2026-09-27
+**Status:** Phase 4 (Monitor) — central service deployed to Coolify @ <lan-host> (LAN staging, HTTP opt-in); full token→MCP E2E passed (auth, admin gating, revisions, stale-write rejection, audit). Google IdP, HTTPS, live clients, real-project pilot still pending.
 
 ---
 
@@ -163,6 +174,29 @@ Installed next to this script (protocol-header.sh) by install.sh — same direct
   2026-09-26) — including against this repo's own `EVIDENCE_PROTOCOL.md`,
   not only the template fixture.
 
+### H7: central service preserves project isolation and detects stale edits
+- **H0 (null):** The proposed multiuser service or folder installer can expose
+  one project's protocol to another user, silently overwrite a collaborator's
+  edit, or change files outside the selected installation directory.
+- **H1 (alternative):** The pilot service stores protocols and immutable
+  revisions in PostgreSQL, enforces project membership from verified OIDC
+  subjects, detects stale revisions transactionally, and the installer only
+  writes under the user's selected project/deployment directory after an
+  explicit dry-run/confirmation.
+- **Acceptance criterion:** unauthenticated HTTP calls return 401; project
+  readers cannot write; users without membership cannot read; stale revision
+  writes conflict without changing current content; 5 isolated disposable
+  projects remain isolated; all five agent install fixtures are idempotent,
+  preserve unrelated config, reject symlink escapes/standalone-rule conflicts,
+  and keep credentials out of service URLs; Claude/Devin hooks suppress stale
+  local snapshots for central projects; Docker image builds.
+- **Status:** 🟡 local pilot checks pass (18/18 Python tests, 2/2 central-hook
+  checks; existing suites 63/63; Keycloak Compose config and Evidence image
+  build pass).
+  **Not validated:** Google IdP/Keycloak realm and client-registration setup,
+  live OAuth/tool calls in real clients, import of 3–5 real user protocols,
+  backup restore, or public deployment. This is not approval to scale.
+
 ---
 
 ## 2. Phases
@@ -214,10 +248,91 @@ code that produced it.
 review, and (eventually) a real Cursor/Trae install if one becomes
 reachable from this environment.
 **Status:** ongoing
-**Findings so far:** PR #1 (`bajotto/evidence`) open against
-`main`, draft, subscribed for CI/review events. No CI configured in this
-repository as of this writing (0 check runs on the head commit) — "green"
-currently means the local test suites above, not a CI badge.
+**Findings so far:** H7 local checks pass (18/18 Python tests; 2/2
+central-aware hook checks; legacy suites 63/63). A disposable PostgreSQL
+container held five isolated fixture projects; the remote MCP HTTP endpoint
+rejected unauthenticated calls and returned database protocol for an
+authenticated test subject. Installer fixtures covered all five agents,
+dry-run, idempotence, preservation, unsafe URL rejection, standalone-rule
+conflict refusal, and symlink escape rejection. Claude/Devin hook fixtures
+confirmed central projects do not inject a stale local snapshot. Compose
+config and the Evidence image build passed. One stale audit-count
+assertion was corrected after the new approval audit event (actual 5,
+expected 4); the full 18-test suite then passed.
+
+On 2026-09-27 the server bundle was installed to `evidence-server/` and
+the full stack was actually started on loopback (Keycloak 127.0.0.1:8081,
+MCP 127.0.0.1:8000, both databases private). Two defects surfaced that no
+test had covered — invalid `database=` conninfo option and the
+HTTPS-only issuer check breaking loopback staging — both fixed with
+regression tests (Incidents g–h). After the fixes: `GET /health` → 200,
+unauthenticated `POST /mcp` → 401 with correct `WWW-Authenticate`/
+`resource_metadata`, the container connected to the real `evidence`
+database, and Keycloak's master-realm OIDC discovery responds. The
+`evidence` realm, Google IdP, and client-registration policies are still
+not configured; no real user protocol or non-loopback deployment has been
+touched. Remaining blockers: configure the bundled Keycloak realm/Google
+IdP/client-registration policies, verify actual OAuth and MCP calls in
+each client, import 3–5 user-approved real protocols in staging, test
+backup restoration, and add a bundle-upgrade path (the installer currently
+refuses to refresh an installed bundle, worked around by manual copy).
+
+Later on 2026-09-27 the stack was deployed via the Coolify API to
+<server> (<lan-host>), project `evidence`, service `evidence-central`
+(compose project `<compose-project-id>`), on random LAN ports —
+MCP `http://<lan-host>:<port>`, Keycloak `http://<lan-host>:<port>` —
+documented in `method/service/STAGING-COOLIFY.md`. Because TLS cannot be
+issued for a bare LAN IP, staging runs HTTP-to-private-IP behind the new
+explicit opt-in `MCP_INSECURE_PRIVATE_HTTP` (Incident i; must be removed
+before any real deployment). The `evidence` realm, scopes, `evidence-cli`
+client and a `pilot` test user were provisioned; two more defects surfaced
+and were fixed — missing `sub` claim (Keycloak `basic` scope, Incident j)
+and protocol-body loss on create/update (`"header"` vs `"normalize"` mode,
+Incident k). The full LAN E2E then passed: tokens → initialize → admin
+denial without `evidence:admin` → admin create → `protocol_get` with the
+complete body → `protocol_update` to revision 2 → stale-update rejection →
+audit history → 401 without token. Test fixture `lan-pilot` was deleted.
+Still not production: no Google IdP, no HTTPS, no live OAuth in any of the
+five clients, no real-protocol import, no validated backup/restore.
+
+#### Phase 4 follow-up — migrate Evidence staging to <server> PostgreSQL (2026-09-27)
+
+**Request:** stop running a second PostgreSQL service in Coolify and use the host-native PostgreSQL 18 cluster on <server> (<lan-host>:<port>); keep Evidence and Keycloak in separate logical databases/roles; retire the old PG17 services/volumes only after successful migration and tests.
+
+- **H0:** connecting the two services to the shared host cluster can mix application privileges, disrupt other DB clients, inherit stale collation metadata, or lose rollback state.
+- **H1:** separate databases/roles on PG18, existing private-CIDR HBA rules plus dedicated role passwords, logical backup/restore, and a gated cutover preserve isolation and allow rollback without adding a PostgreSQL container.
+- **Acceptance criteria:** no new PostgreSQL container; 2 databases + 2 least-privilege roles; both services connect to PG18; no other app data/config changed; 100% of E2E cases pass; source PG17 volumes retained until rollback window closes; exact volumes deleted only after final confirmation.
+- **Discovery (read-only):** PG18/main online; listener `0.0.0.0:5432`, SSL enabled; TCP from Evidence container to host gateway and LAN address passed. UFW 5432 is `Anywhere` v4/v6 and remains unchanged per user decision. HBA has private CIDR rules; no HBA/UFW changes made. Required inventories completed for servers 21/22/23/25; no other host is to be changed by this task.
+- **Host DB finding:** collation version 2.42 vs 2.43 on eight existing DBs and template1. No refresh/reindex performed; create the new DBs from template0 and verify their version.
+- **Compose preparation (not deployed):** service env mappings now support separate Evidence/Keycloak PG endpoints. Existing PG17 service definitions and volumes remain to provide rollback. `docker compose ... config --quiet` PASS; `git diff --check` on touched config/docs PASS. `test_remote_service`: 10 PASS, 1 integration case skipped because no isolated test DB was configured; an initial run lacked `mcp`, then the pinned service requirements were installed in a temporary venv and tests passed. Warnings: upstream Starlette/httpx deprecation and Pydantic unresolved `lifespan` annotation; no test failure.
+- **Phase 2 progress:** created `evidence_app`/`evidence_keycloak_app` as `NOLOGIN` roles and `evidence_store`/`evidence_keycloak` databases from `template0`; both report collation 2.43 recorded/current. Streamed custom-format dumps from the two PG17 databases into PG18 with `pg_restore --exit-on-error --no-owner --no-acl --role=...`; both commands exited 0. Public-table counts match source→target (7→7 and 90→90); per-table row-count fingerprints match for each pair. PG17 sources and volumes remain intact, and the new roles are still NOLOGIN.
+- Compose config now maps both services to independent PG endpoints through runtime variables; existing PG17 service definitions remain for rollback. Compose render, `git diff --check`, and `test_remote_service` (10 PASS, one isolated-DB test skipped) passed; tests ran in a temporary venv from pinned service requirements. A first table-count query failed due shell quoting (`pg_catalog` parsed as a column); corrected query passed. A first unit test attempt lacked `mcp` in global Python; isolated venv resolved it. Non-fatal Starlette/httpx and Pydantic warnings remain.
+- **Cutover executed (2026-09-27, via Coolify API):** generated two random role passwords locally (never printed; staged only in `0600` temp files, shredded after use), applied `ALTER ROLE ... LOGIN PASSWORD` over ssh `psql` stdin, and verified authenticated connections from inside the compose network (`evidence_app`→`evidence_store` 7 tables, `evidence_keycloak_app`→`evidence_keycloak` 90 tables). Patched the service's `docker_compose_raw` via the Coolify API (`PATCH /services/{uuid}`, base64 field) so `evidence` uses `<lan-host>/evidence_store/evidence_app` and `identity` uses `<lan-host>/evidence_keycloak/evidence_keycloak_app`; passwords live only inside Coolify's rendered compose. Redeployed via `POST /deploy?uuid=...&force=true` (HTTP 200). The API token was used from the private access notes without printing it (extracted per-call inside a wrapper script; file remains `0664` — flagged for rotation since its contents were partially exposed during probing).
+- **Post-cutover verification:** all 4 containers up; `GET /health` 200; OIDC discovery 200 after Keycloak boot; full `/tmp/e2e_mcp_test.py` rerun = **10/10 PASS** (tokens, initialize, admin gating deny/allow, get, update rev→2, stale reject, persisted content, audit history, unauth 401). `pg_stat_activity` showed `evidence_keycloak_app` connections from compose network IP `<container-ip>`; new writes (`protocol.created`/`protocol.updated`) confirmed inside `evidence_store` on PG18. Test fixture `lan-pilot` deleted from `evidence_store`.
+- **Rollback window open:** PG17 services `database`/`identity-database` remain running (unused) and both old volumes retained: `<compose-project-id>_evidence-data`, `<compose-project-id>_identity-data`. Rollback = repoint compose env to PG17 service names + redeploy. Container/volume retirement and volume deletion still require the rollback window to close plus explicit final confirmation.
+
+### Keycloak Admin Console access (LAN staging)
+- URL: `http://<lan-host>:<port>/admin` (plain HTTP, reachable only on the
+  staging LAN; this is not a production/admin URL).
+- Sign in with bootstrap username `admin` and the current admin password.
+  For the initial password, inspect the Coolify service's
+  `KC_BOOTSTRAP_ADMIN_PASSWORD` environment variable in the trusted Coolify
+  UI; do not put its value in chat, shell commands, terminal output, logs,
+  or this protocol. The value is a bootstrap input: after Keycloak has
+  initialized its database, changing that environment variable does not
+  necessarily change the existing admin user's password. If the password
+  was rotated, use the rotated password or the documented Keycloak recovery
+  process instead of assuming the bootstrap value is current.
+- The admin account belongs to Keycloak's `master` realm. After login, use
+  the realm selector in the Admin Console to select `evidence` to manage the
+  MCP realm. Do not confuse the `master` realm admin with an Evidence MCP
+  user or with the test user `pilot`.
+- Do not retrieve the secret with `docker exec ... env`, `printenv`, shell
+  tracing, or a command that prints environment values: output may be
+  captured in terminal history, logs, or tool transcripts. The earlier
+  suggestion to run `docker exec ... env | grep` is withdrawn; use the
+  Coolify UI's protected environment-variable view or rotate/reset the
+  credential through an approved secure procedure.
 
 ---
 
@@ -355,6 +470,82 @@ handles that one fixture. Trying the fix against at least one real,
 independently-authored document (this repo's own new file, in this case)
 before calling it fixed is what caught the gap the fixture couldn't.
 
+### Incident: 2026-09-27 (g) — psycopg3 rejected the container's conninfo
+**What happened:** First real boot of the Compose stack put the `evidence`
+container in a crash loop: `psycopg.ProgrammingError: invalid connection
+option "database"`. Every unit test had passed.
+**Root cause:** `_store()` built the conninfo by stripping the `PG` prefix
+off each env var, so `PGDATABASE` became `database=` — a psycopg2/libpq
+alias psycopg3 does not accept (`dbname=`). All tests bypassed `_store()`
+by injecting `EVIDENCE_TEST_CONNINFO` directly, so the env-var→conninfo
+path had zero coverage until the real container ran it.
+**Fixed by:** map env vars to explicit conninfo keys (`host`, `port`,
+`dbname`, `user`, `password`); added `StoreConninfoTests`, which parses
+the built string with `conninfo_to_dict` — no server needed.
+**Lesson:** the env-var adapter layer is part of the deployable surface;
+"the DB integration tests pass" said nothing about it. First real boot
+remains the cheapest way to catch it, and did.
+
+### Incident: 2026-09-27 (h) — HTTPS-only issuer check broke loopback staging
+**What happened:** After (g), the container crashed again:
+`MCP_OIDC_ISSUER_URL must use HTTPS` for
+`http://localhost:8081/realms/evidence` — the documented local-staging
+Keycloak URL.
+**Root cause:** `_validated_url` was called for the issuer without
+`allow_loopback=True`, while the sibling URLs (`MCP_OIDC_JWKS_URL`,
+`MCP_PUBLIC_URL`) already honored the loopback-development exception. The
+docs and `.env.example` describe local staging; the code disagreed.
+**Fixed by:** `allow_loopback=True` on the issuer check, plus a test
+asserting loopback is accepted and non-loopback HTTP still rejected.
+**Lesson:** a policy enforced unevenly across sibling settings is a bug
+waiting for the first loopback deploy; validating each URL class in tests
+would have caught it before the container did.
+
+### Incident: 2026-09-27 (i) — LAN/HTTP URLs rejected outside loopback
+**What happened:** Deploying to Coolify on <lan-host> meant
+`http://<lan-host>/...` issuer/JWKS/public URLs — private-IP HTTP, which
+the URL validator still rejected (only loopback was exempt).
+**Root cause:** correct production policy, but there is no way to issue
+trusted TLS for a bare LAN IP, so staging on the LAN had no legal
+configuration at all.
+**Fixed by:** explicit opt-in `MCP_INSECURE_PRIVATE_HTTP` env flag that
+permits HTTP only for private/non-routable addresses; any global URL still
+requires HTTPS. Documented as staging-only in `.env.example` and
+`method/service/STAGING-COOLIFY.md`, with a regression test covering
+private-IP accept and public-IP reject.
+**Lesson:** when a security default makes a legitimate environment
+impossible rather than merely discouraged, a loud, narrowly-scoped opt-in
+is safer than the workaround operators will invent (e.g. disabling
+validation wholesale).
+
+### Incident: 2026-09-27 (j) — Keycloak tokens arrived without `sub`
+**What happened:** the first real token → MCP call on the LAN deployment
+returned 401; decoding the token showed issuer/audience/scopes but no
+`sub` claim, which the verifier correctly requires.
+**Root cause:** in Keycloak 26 the `Subject (sub)` mapper lives in the
+`basic` client scope, which was not assigned to the new `evidence-cli`
+client — the realm provisioning script set custom scopes only.
+**Fixed by:** assigning `basic` as a default client scope via the admin
+REST API; subsequent tokens carried `sub` and passed verification.
+**Lesson:** "token exists" is not "token is usable" — claim-level checks
+(`sub`, `aud`, `scope`) belong in the provisioning verification, not just
+in the verifier.
+
+### Incident: 2026-09-27 (k) — protocol body silently discarded on write
+**What happened:** the LAN E2E created a project and `protocol_get`
+returned only the generated PROTOCOL-HEADER — the supplied body was gone.
+**Root cause:** `protocol_create_project` and `protocol_update` called
+`_protocol_file(..., "header")`, which returns the output of
+`protocol-header.sh emit` — the header block alone. Both write paths
+stored just the header and silently dropped the body.
+**Fixed by:** new `"normalize"` mode that runs `sync` and returns the
+complete resulting `EVIDENCE_PROTOCOL.md`; create/update now use it.
+Regression test added; the LAN E2E then passed end to end (create → get
+full body → update rev2 → stale-update rejection → audit history).
+**Lesson:** this is the class of bug only an end-to-end write/read
+assertion catches — unit tests validated auth and store logic separately,
+but nothing asserted "the body I sent survives a round trip."
+
 ---
 
 ## 4. Checklist for the next session
@@ -376,6 +567,20 @@ before calling it fixed is what caught the gap the fixture couldn't.
 - [ ] Check PR #1's CI and review status; this repo has no CI configured
   as of 2026-09-26, so "green" today means the local suites listed in
   Phase 3, not a CI badge — confirm that hasn't silently changed
+- [ ] For H7, configure the bundled Keycloak `evidence` realm and Google IdP;
+  create the Google OAuth client/callback, constrain registration hosts,
+  assign `evidence:access`/`evidence:admin`, and test audience/issuer claims
+- [ ] Reinstall the Claude/Devin global hooks from this checkout on each
+  participating machine to activate central-aware behavior; do not let a
+  stale hook inject local protocol snapshots for central projects
+- [ ] Verify live OAuth and MCP tool calls in Claude Code, Devin CLI, Codex,
+  Cursor, and Trae; update H7 per client rather than inferring from schema
+- [ ] Select 3–5 user-approved real project protocols, import to staging,
+  compare each imported body/revision, and record per-project results
+- [ ] Add and test encrypted backup/restore and resolve the central-service
+  versus existing global standalone-hook injection path before public use
+- [ ] Do not scale or import all projects until the pilot passes 100% and
+  receives explicit approval
 - [ ] Before claiming any of the above "confirmed," re-run the actual
   command that confirms it — do not rely on this document's memory of the
   result

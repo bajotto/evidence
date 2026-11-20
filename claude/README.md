@@ -53,3 +53,15 @@ present from the first message of a session and still not act on it. That
 is a separate, harder problem — Layer 3 in
 [`../method/ENFORCEMENT_MODEL.md`](../method/ENFORCEMENT_MODEL.md), and it
 has to be solved in your own project's code, not in this hook.
+
+## Central service integration (pilot)
+
+For central PostgreSQL-backed protocols, use the repository-root installer described in `../INSTALLATION_GUIDE.md`:
+
+```bash
+python3 evidence_install.py project --target /path/to/project --agent claude \
+  --service-url https://your-service.example/mcp --project-slug your-project \
+  --confirm-project-linked --dry-run
+```
+
+Review the generated `.mcp.json` and `.claude/rules/evidence-central.md` before rerunning without `--dry-run`. If the machine's global standalone hook is installed, rerun `./claude/install.sh` to install its central-aware version; it skips local protocol injection for central projects and adds a pointer to MCP. The hook does not fetch live state itself. Remote OAuth behavior has not yet been verified against a live Claude Code install.

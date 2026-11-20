@@ -82,7 +82,7 @@ generate_global() {
     echo "# Global Rules — Windsurf/Cascade"
     echo ""
     echo "## SSH"
-    echo "- ssh always use the format ssh main@IP (192.168.50.1,22,23,25)"
+    echo "- ssh to LAN hosts as the deploy user (host list kept in private access notes)"
     echo ""
     echo "## Evidence — MANDATORY (every session, every project)"
     echo ""
@@ -177,7 +177,7 @@ generate_project() {
     extract_section "$ENFORCEMENT" "Multi-Server Inventory Check"
     echo ""
     echo "## SSH"
-    echo "- ssh main@IP for 192.168.50.1, 22, 23, 25"
+    echo "- ssh to LAN hosts as the deploy user (host list kept in private access notes)"
   } > "$tmp"
   write_if_changed "$rule_file" "$tmp"
   check_limit "$rule_file" 12000 "project rule" || true

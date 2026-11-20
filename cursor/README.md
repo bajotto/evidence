@@ -85,3 +85,15 @@ Same distinction as every other implementation here: a rule file being
 present is not the same as Cursor's agent acting on it every time. That is
 Layer 3 territory — see
 [`../method/ENFORCEMENT_MODEL.md`](../method/ENFORCEMENT_MODEL.md).
+
+## Central service integration (pilot)
+
+The unified installer can configure project-scoped remote MCP and a rule file:
+
+```bash
+python3 evidence_install.py project --target /path/to/project --agent cursor \
+  --service-url https://your-service.example/mcp --project-slug your-project \
+  --confirm-project-linked --dry-run
+```
+
+Review `.cursor/mcp.json` and `.cursor/rules/evidence-central.mdc` before applying. Cursor's live OAuth calls against this service have not been verified end-to-end; the existing local stdio adapter remains a separate option.

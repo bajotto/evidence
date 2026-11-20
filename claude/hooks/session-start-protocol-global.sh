@@ -43,11 +43,6 @@ $(cat "$f")"
   fi
 done
 
-# Walk up from the session's directory: a session very often starts in a
-# subdirectory of the repo (monorepo package, server/, web/), while the
-# protocol lives at the root. Checking only "$CWD" missed it there, and missed
-# it silently — the session then ran with no phase, status or open hypotheses.
-# Deepest match wins, so a nested protocol still overrides its parent's.
 find_project_protocol() {
   _d="$1"
   while [ -n "$_d" ] && [ "$_d" != "/" ]; do
@@ -60,23 +55,53 @@ find_project_protocol() {
   [ -f "/EVIDENCE_PROTOCOL.md" ] && printf '%s\n' "/EVIDENCE_PROTOCOL.md" && return 0
   return 1
 }
-PROJECT_PROTOCOL="$(find_project_protocol "$CWD" || true)"
+
+find_project_central_manifest() {
+  _d="$1"
+  while [ -n "$_d" ] && [ "$_d" != "/" ]; do
+    if [ -f "$_d/.evidence/project.json" ]; then
+      printf '%s\n' "$_d/.evidence/project.json"
+      return 0
+    fi
+    _d="$(dirname "$_d")"
+  done
+  [ -f "/.evidence/project.json" ] && printf '%s\n' "/.evidence/project.json" && return 0
+  return 1
+}
+CENTRAL_MANIFEST="$(find_project_central_manifest "$CWD" || true)"
 HEADER_SCRIPT="$CLAUDE_DIR/hooks/protocol-header.sh"
-if [ -f "$PROJECT_PROTOCOL" ]; then
+if [ -n "$CENTRAL_MANIFEST" ]; then
   if [ -x "$HEADER_SCRIPT" ]; then
-    "$HEADER_SCRIPT" sync "$PROJECT_PROTOCOL" </dev/null >/dev/null 2>&1 || true
-    PROTOCOL_HEADER=$("$HEADER_SCRIPT" emit "$PROJECT_PROTOCOL" </dev/null 2>/dev/null || true)
+    PROJECT_CONTEXT="$(printf '%s' "$STDIN_JSON" | "$HEADER_SCRIPT" hook 2>/dev/null | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null || true)"
+  else
+    PROJECT_CONTEXT="Central Evidence project detected, but the installed hook is too old to handle central mode. Rerun the Evidence Claude installer."
   fi
-  if [ -n "${PROTOCOL_HEADER:-}" ]; then
-    CONTEXT="$CONTEXT
+  case "$PROJECT_CONTEXT" in
+    *"CENTRAL EVIDENCE MODE"*) ;;
+    *) PROJECT_CONTEXT="Central project marker found but the central-aware protocol hook is missing or failed. Rerun the Evidence Claude installer and stop before protocol-dependent actions." ;;
+  esac
+  CONTEXT="$CONTEXT
+
+=== CENTRAL PROJECT STATE ===
+$PROJECT_CONTEXT"
+else
+  PROJECT_PROTOCOL="$(find_project_protocol "$CWD" || true)"
+  if [ -f "$PROJECT_PROTOCOL" ]; then
+    if [ -x "$HEADER_SCRIPT" ]; then
+      "$HEADER_SCRIPT" sync "$PROJECT_PROTOCOL" </dev/null >/dev/null 2>&1 || true
+      PROTOCOL_HEADER=$("$HEADER_SCRIPT" emit "$PROJECT_PROTOCOL" </dev/null 2>/dev/null || true)
+    fi
+    if [ -n "${PROTOCOL_HEADER:-}" ]; then
+      CONTEXT="$CONTEXT
 
 === CURRENT PROTOCOL HEADER (authoritative; full history at $PROJECT_PROTOCOL) ===
 $PROTOCOL_HEADER"
-  else
-    CONTEXT="$CONTEXT
+    else
+      CONTEXT="$CONTEXT
 
 === CURRENT PROTOCOL ===
 Header unavailable; read the full file with the read tool: $PROJECT_PROTOCOL"
+    fi
   fi
 fi
 
