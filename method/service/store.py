@@ -12,6 +12,8 @@ from psycopg.types.json import Jsonb
 
 SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{1,62})[a-z0-9]$")
 MAX_PROTOCOL_BYTES = 2_000_000
+LAST_USED_REFRESH_SECONDS = 300
+READ_REFRESH_SECONDS = 300
 
 
 class RevisionConflict(Exception):
@@ -319,8 +321,10 @@ class Store:
                 "INSERT INTO protocol_reads (project_id, subject, revision, via) "
                 "SELECT p.id, m.subject, %s, %s FROM projects p JOIN project_memberships m ON m.project_id = p.id "
                 "WHERE p.slug = %s AND m.subject = %s "
-                "ON CONFLICT (project_id, subject) DO UPDATE SET revision = EXCLUDED.revision, via = EXCLUDED.via, read_at = now()",
-                (revision, via, slug, subject),
+                "ON CONFLICT (project_id, subject) DO UPDATE SET revision = EXCLUDED.revision, via = EXCLUDED.via, read_at = now() "
+                "WHERE protocol_reads.revision IS DISTINCT FROM EXCLUDED.revision OR protocol_reads.via IS DISTINCT FROM EXCLUDED.via "
+                "OR protocol_reads.read_at < now() - make_interval(secs => %s)",
+                (revision, via, slug, subject, READ_REFRESH_SECONDS),
             )
 
     def sync_status(self, slug: str, subject: str, is_admin: bool = False) -> dict:
@@ -517,12 +521,17 @@ class Store:
         if not token.startswith("evk_"):
             return None
         with self.connect() as conn:
-            return conn.execute(
-                "UPDATE user_tokens t SET last_used = now() FROM users u "
-                "WHERE t.token_hash = %s AND t.revoked_at IS NULL AND u.subject = t.subject AND NOT u.disabled "
-                "RETURNING t.subject, u.email",
-                (_hash_token(token),),
+            row = conn.execute(
+                "SELECT t.id, t.subject, u.email, (t.last_used IS NULL OR t.last_used < now() - make_interval(secs => %s)) AS stale "
+                "FROM user_tokens t JOIN users u ON u.subject = t.subject "
+                "WHERE t.token_hash = %s AND t.revoked_at IS NULL AND NOT u.disabled",
+                (LAST_USED_REFRESH_SECONDS, _hash_token(token)),
             ).fetchone()
+            if row is None:
+                return None
+            if row["stale"]:  # a commit costs far more than the lookup, so refresh last_used at most every few minutes
+                conn.execute("UPDATE user_tokens SET last_used = now() WHERE id = %s", (row["id"],))
+            return {"subject": row["subject"], "email": row["email"]}
 
     def join_project(self, subject: str, join_key: str, name: str, initial_content: str) -> dict:
         """Auto-register: create the project (caller becomes owner) or add the caller as editor.

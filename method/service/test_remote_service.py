@@ -158,6 +158,23 @@ class ProtocolToolsTests(unittest.TestCase):
         phase = _protocol_file("sample-project", source, "search", "phase", "2")
         self.assertIn("Phase 2", phase)
 
+    def test_header_is_built_once_per_content_and_rebuilt_when_the_content_changes(self):
+        from unittest import mock
+        from method.service import remote_mcp_server as server
+        server._HEADER_CACHE.clear()
+        body = "# cache-demo\n\nBody one.\n"
+        with mock.patch.object(server, "_build_protocol_file", wraps=server._build_protocol_file) as build:
+            first = _protocol_file("cache-demo", body, "header")
+            self.assertEqual(_protocol_file("cache-demo", body, "header"), first)
+            self.assertEqual(build.call_count, 1)  # the second request did not spawn the header script
+            _protocol_file("cache-demo", body + "More.\n", "header")  # new content, new header
+            _protocol_file("other-demo", body, "header")  # same content in another project is separate
+            self.assertEqual(build.call_count, 3)
+            template = (ROOT / "method/PROJECT_PROTOCOL_TEMPLATE.md").read_text(encoding="utf-8")
+            _protocol_file("cache-demo", template, "search", "phase", "2")  # only headers are cached
+            _protocol_file("cache-demo", template, "search", "phase", "2")
+            self.assertEqual(build.call_count, 5)
+
     def test_normalize_preserves_full_body(self):
         body = "# demo — Evidence Protocol\n\nBody marker: must survive normalization.\n"
         normalized = _protocol_file("demo-project", body, "normalize")

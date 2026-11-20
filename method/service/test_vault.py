@@ -55,6 +55,18 @@ class JoinAndTokenTests(unittest.TestCase):
             conn.execute("DELETE FROM projects WHERE join_key = %s", (self.key,))
             conn.execute("DELETE FROM users WHERE subject = ANY(%s)", ([u["subject"] for u in self.users],))
 
+    def test_last_used_is_refreshed_at_most_every_few_minutes(self):
+        tok = self.store.issue_token(self.users[0]["subject"], "throttle", True)
+        with self.store.connect() as conn:
+            conn.execute("UPDATE user_tokens SET last_used = now() - interval '1 hour' WHERE id = %s", (tok["id"],))
+        self.store.resolve_token(tok["token"])  # stale: refreshed
+        with self.store.connect() as conn:
+            first = conn.execute("SELECT last_used FROM user_tokens WHERE id = %s", (tok["id"],)).fetchone()["last_used"]
+        self.store.resolve_token(tok["token"])  # fresh: no write
+        with self.store.connect() as conn:
+            self.assertEqual(conn.execute("SELECT last_used FROM user_tokens WHERE id = %s", (tok["id"],)).fetchone()["last_used"], first)
+            self.assertGreater(first, conn.execute("SELECT now() - interval '1 minute' AS t").fetchone()["t"])
+
     def test_token_lifecycle_and_admin_gate(self):
         with self.assertRaises(AccessDenied):
             self.store.create_user("a@x.test", "", False)
@@ -227,6 +239,23 @@ class VaultStoreTests(unittest.TestCase):
         admin_view = self.store.issue_token(self.m2, "by-admin", True)
         self.assertEqual(self.store.list_tokens(self.m2, True)[0]["token_hint"], admin_view["token"][-8:])
         self.assertIsNotNone(extra)
+
+    def test_read_tracking_skips_writes_when_nothing_changed(self):
+        slug = self.slug_a
+        self.store.touch_read(slug, self.m1, 1, "hook")
+        with self.store.connect() as conn:
+            conn.execute("UPDATE protocol_reads SET read_at = now() - interval '1 hour' WHERE subject = %s", (self.m1,))
+        self.store.touch_read(slug, self.m1, 1, "hook")  # same revision and channel but stale: refreshed
+        def read_at():
+            with self.store.connect() as conn:
+                return conn.execute("SELECT read_at, revision, via FROM protocol_reads WHERE subject = %s", (self.m1,)).fetchone()
+        stamped = read_at()
+        self.store.touch_read(slug, self.m1, 1, "hook")  # unchanged and fresh: no write
+        self.assertEqual(read_at(), stamped)
+        self.store.touch_read(slug, self.m1, 2, "hook")  # a new revision is always recorded
+        self.assertEqual(read_at()["revision"], 2)
+        self.store.touch_read(slug, self.m1, 2, "mcp")  # and so is a new channel
+        self.assertEqual(read_at()["via"], "mcp")
 
     def test_sync_status_tells_who_has_read_the_current_protocol_revision(self):
         slug = self.slug_a  # members: powner (owner), owner (editor), m1 and m2 (readers)

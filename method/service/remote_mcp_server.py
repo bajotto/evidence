@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import ipaddress
 import os
 import re
@@ -82,9 +83,23 @@ def _identity() -> tuple[str, str | None, bool]:
     return token.subject, claims.get("email"), "evidence:admin" in token.scopes
 
 
+_HEADER_CACHE: dict[tuple[str, str], str] = {}
+
+
 def _protocol_file(slug: str, content: str, command: str, *args: str) -> str:
     if not SLUG_RE.fullmatch(slug):
         raise ValueError("invalid project slug")
+    if command == "header":  # the header is a pure function of the content: build it once per revision, not per request
+        key = (slug, hashlib.sha256(content.encode("utf-8")).hexdigest())
+        if key not in _HEADER_CACHE:
+            if len(_HEADER_CACHE) >= 256:
+                _HEADER_CACHE.pop(next(iter(_HEADER_CACHE)))
+            _HEADER_CACHE[key] = _build_protocol_file(slug, content, command, *args)
+        return _HEADER_CACHE[key]
+    return _build_protocol_file(slug, content, command, *args)
+
+
+def _build_protocol_file(slug: str, content: str, command: str, *args: str) -> str:
     with tempfile.TemporaryDirectory(prefix="evidence-protocol-") as temp:
         path = Path(temp) / slug / "EVIDENCE_PROTOCOL.md"
         path.parent.mkdir()
