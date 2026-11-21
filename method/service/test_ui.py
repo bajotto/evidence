@@ -399,7 +399,8 @@ class AdminUiTests(unittest.TestCase):
             self.store.vault_get(f"DB{self.sfx}", user["subject"])
         self.post("/ui/project/vault/unshare", {"slug": self.slug, "name": f"DB{self.sfx}"})
         self.assertEqual(self.store.vault_list(self.admin, True, self.slug, include_unreadable=True), [])
-        self.post("/ui/project/vault/delete", {"slug": self.slug, "name": f"DB{self.sfx}"})
+        self.assertEqual(self.post("/ui/project/vault/delete", {"slug": self.slug, "name": f"DB{self.sfx}"}).status_code, 404)  # no delete from a project page
+        self.store.vault_delete(f"DB{self.sfx}", self.admin, True)
 
     def test_member_sees_granted_secrets_only_and_can_fetch_value_for_copy(self):
         self.post("/ui/projects", {"slug": self.slug, "name": "Shared"})

@@ -865,8 +865,7 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                 f"<tr><td>{e(s['name'])}<br><small class='muted'>{e(s['description'])}</small></td><td><span class='badge cat'>{e(s['category'])}</span></td>"
                 f"<td>{mail(s['owner'])}</td><td class='row-actions'>"
                 + ("<span class='badge'>via category</span>" if (s['category'], s['owner']) in via else
-                   form_html('/ui/project/vault/unshare', csrf, {'slug': slug, 'name': s['name']}, 'Unshare', confirm='Stop sharing this secret with the project?', cls='outline')) +
-                f"{form_html('/ui/project/vault/delete', csrf, {'slug': slug, 'name': s['name']}, 'Delete', confirm='Delete this secret for everyone?', cls='danger')}</td></tr>"
+                   form_html('/ui/project/vault/unshare', csrf, {'slug': slug, 'name': s['name']}, 'Unshare', confirm='Stop sharing this secret with the project?', cls='outline')) + "</td></tr>"
                 for s in store.vault_list(sess["sub"], True, slug, include_unreadable=True))
             stable = (f"<table class='striped'><tr><th>Secret</th><th>Category</th><th>Owner</th><th></th></tr>{srows}</table>"
                       if srows else "<p class='muted'>Nothing is shared with this project yet, so this project reads no secrets.</p>")
@@ -924,10 +923,6 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
     async def grants_set(request):
         return await project_action(
             lambda s, f: store.set_member_categories(f["slug"], f["subject"], f.getlist("cat"), s["sub"], True), "saved")(request)
-
-    @app.custom_route("/ui/project/vault/delete", methods=["POST"], include_in_schema=False)
-    async def vault_remove(request):
-        return await project_action(lambda s, f: store.vault_delete(f["name"], s["sub"], True), "deleted")(request)
 
     @app.custom_route("/ui/project/vault/categories", methods=["POST"], include_in_schema=False)
     async def vault_categories(request):
