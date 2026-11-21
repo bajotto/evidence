@@ -915,6 +915,22 @@ class Store:
                          (actor, Jsonb({"name": name, "projects": sorted(wanted), "users": len(valid)})))
         return {"name": name, "projects": sorted(wanted), "users": len(valid)}
 
+    def share_into_project(self, names: list[str], project_slug: str, actor: str, is_admin: bool = False) -> dict:
+        """Add existing secrets to one project (keeps their other shares). Owner of each secret, or an admin."""
+        with self.connect() as conn:
+            project = self._manageable_projects(conn, actor, is_admin).get(project_slug)
+            if project is None:
+                raise AccessDenied("project not found, or not yours to share into")
+            for name in names:
+                sec = self._secret_row(conn, name, lock=True)
+                if sec is None or (sec["owner_subject"] != actor and not is_admin):
+                    raise AccessDenied("secret not found or you are not its owner")
+                conn.execute("INSERT INTO secret_project_shares (secret_id, project_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                             (sec["id"], project["id"]))
+            conn.execute("INSERT INTO audit_events (project_id, actor_subject, event_type, details) "
+                         "VALUES (%s, %s, 'vault.shared', %s)", (project["id"], actor, Jsonb({"names": sorted(names)})))
+        return {"project": project_slug, "shared": len(names)}
+
     def unshare_from_project(self, name: str, project_slug: str, actor: str, is_admin: bool = False) -> dict:
         with self.connect() as conn:
             sec = self._secret_row(conn, name, lock=True)

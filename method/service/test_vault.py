@@ -162,6 +162,19 @@ class VaultStoreTests(unittest.TestCase):
         self.assertEqual(sorted(listed[db]["projects"]), sorted([self.slug_a, self.slug_b]))
         self.assertEqual((listed[api]["projects"], listed[api]["users"]), ([], 1))
 
+    def test_share_into_project_adds_without_dropping_other_shares(self):
+        a, b = self.n("SA"), self.n("SB")
+        self.store.vault_put(a, "env", "va", self.owner, project_slug=self.slug_b)
+        self.store.vault_put(b, "env", "vb", self.owner)
+        self.assertEqual(self.store.vault_list(self.owner, False, self.slug_a), [])  # nothing shared: project reads nothing
+        self.store.share_into_project([a, b], self.slug_a, self.owner)
+        self.assertEqual(sorted(x["name"] for x in self.store.vault_list(self.owner, False, self.slug_a)), sorted([a, b]))
+        self.assertEqual(self.store.vault_get(a, self.owner, self.slug_b), "va")  # earlier share to B kept
+        with self.assertRaises(AccessDenied):
+            self.store.share_into_project([a], self.slug_a, self.stranger)  # not the secret's owner
+        with self.assertRaises(AccessDenied):
+            self.store.share_into_project([a], self.slug_b, self.m1)  # reader of B cannot share into it
+
     def test_ciphertext_at_rest_audit_and_admin_cannot_read(self):
         name = self.n("AT")
         self.store.vault_put(name, "env", "plain-value-9", self.owner)

@@ -855,13 +855,22 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                 f"{form_html('/ui/project/vault/delete', csrf, {'slug': slug, 'name': s['name']}, 'Delete', confirm='Delete this secret for everyone?', cls='danger')}</td></tr>"
                 for s in store.vault_list(sess["sub"], True, slug, include_unreadable=True))
             stable = (f"<table class='striped'><tr><th>Secret</th><th>Category</th><th>Owner</th><th></th></tr>{srows}</table>"
-                      if srows else "<p class='muted'>Nothing is shared with this project yet.</p>")
+                      if srows else "<p class='muted'>Nothing is shared with this project yet, so this project reads no secrets.</p>")
+            loose = [s for s in store.vault_list(sess["sub"], True, None, include_unreadable=True) if slug not in s["projects"]]
+            if loose:
+                picks = "".join(f"<label><input type='checkbox' name='name' value='{e(s['name'])}'> {e(s['name'])} "
+                                f"<span class='badge cat'>{e(s['category'])}</span></label>" for s in loose)
+                stable += ("<details class='create'><summary role='button'>+ Share existing secrets</summary>"
+                           + form_html("/ui/project/vault/share", csrf, {"slug": slug}, "Share selected", False, f"<div class='checks'>{picks}</div>")
+                           + "</details>")
             audit = "".join(
                 f"<tr><td>{e(a['created_at'][:19].replace('T', ' '))}</td><td>{e(a['event_type'])}</td>"
                 f"<td><small class='muted'>{e(json.dumps(a['details'])) if a['details'] else ''}</small></td></tr>" for a in store.list_audit(slug, sess["sub"], 30, True))
             body = (f"<p><a href='/ui/projects'>&larr; Projects</a></p>" + head(slug, f"<a role='button' href='/ui/protocol?slug={e(urllib.parse.quote(slug))}'>Protocol</a>")
-                    + f"<article><header>Members and secret access</header>{add_member}"
-                      f"<table class='striped'><tr><th>Member</th><th>Protocol</th><th>Categories they can read</th><th></th></tr>{mrows}</table></article>"
+                    + f"<article><header>Members and secret access</header>"
+                      "<p class='muted'>Categories only limit what non-owner members may read. They do not give the project any secret: "
+                      "share secrets with it in the next section.</p>" + add_member
+                    + f"<table class='striped'><tr><th>Member</th><th>Protocol</th><th>Categories they can read</th><th></th></tr>{mrows}</table></article>"
                     + f"<article><header>Secrets shared with this project "
                       f"<a role='button' class='compact' href='/ui/secret/new?project={e(urllib.parse.quote(slug))}'>+ New secret</a></header>{stable}</article>"
                     + f"<article><header>Activity</header><table class='striped'><tr><th>When</th><th>Event</th><th>Details</th></tr>{audit}</table></article>")
@@ -896,6 +905,10 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
     @app.custom_route("/ui/project/vault/delete", methods=["POST"], include_in_schema=False)
     async def vault_remove(request):
         return await project_action(lambda s, f: store.vault_delete(f["name"], s["sub"], True), "deleted")(request)
+
+    @app.custom_route("/ui/project/vault/share", methods=["POST"], include_in_schema=False)
+    async def vault_share(request):
+        return await project_action(lambda s, f: store.share_into_project(f.getlist("name"), f["slug"], s["sub"], True), "shared")(request)
 
     @app.custom_route("/ui/project/vault/unshare", methods=["POST"], include_in_schema=False)
     async def vault_unshare(request):
