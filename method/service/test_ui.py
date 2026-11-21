@@ -173,7 +173,7 @@ class AdminUiTests(unittest.TestCase):
         self.assertIn("id='q'", html)  # search appears once there is something to search
         self.assertIn(f"data-search='find{self.sfx.lower()} billing key api-keys", html)
         self.assertIn("aria-current=page>Secrets<", html)
-        self.assertIn("<h2>Secrets</h2>", html)
+        self.assertIn("<h1>Secrets</h1>", html)
         self.assertIn("+ New secret", html)
 
     def test_members_read_and_download_the_protocol_and_only_editors_edit_it(self):
@@ -193,7 +193,7 @@ class AdminUiTests(unittest.TestCase):
             self.assertNotIn("+ New project", plist)  # members cannot create projects here
             view = self.client.get(f"/ui/protocol?{q}")
             self.assertEqual(view.status_code, 200)
-            self.assertIn("<h3 id='phase-4'>Phase 4</h3>", view.text)
+            self.assertIn("<h2 id='phase-4'>Phase 4</h2>", view.text)
             self.assertIn("<strong>bold</strong>", view.text)
             self.assertIn("<th>a</th>", view.text)
             self.assertNotIn("<script>alert", view.text)  # escaped, never executed
@@ -237,7 +237,7 @@ class AdminUiTests(unittest.TestCase):
             self.assertIn("revision 3", hist)
             old = self.client.get(f"/ui/protocol?{q}&rev=2").text
             self.assertIn("You are reading revision 2", old)
-            self.assertIn("<h3 id='phase-4'>Phase 4</h3>", old)
+            self.assertIn("<h2 id='phase-4'>Phase 4</h2>", old)
             self.assertEqual(self.client.get(f"/ui/protocol/raw?{q}&rev=2").text, hostile)
         finally:
             with self.store.connect() as conn:

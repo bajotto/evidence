@@ -100,7 +100,7 @@ def render(markdown: str) -> str:
         heading = re.match(r"^(#{1,6})\s+(.*?)\s*#*\s*$", line)
         if heading:
             flush()
-            level = min(len(heading.group(1)) + 2, 6)
+            level = min(len(heading.group(1)) + 1, 6)
             base = re.sub(r"[^a-z0-9]+", "-", heading.group(2).lower()).strip("-") or "section"
             n = seen_ids.get(base, 0)
             seen_ids[base] = n + 1

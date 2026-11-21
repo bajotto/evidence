@@ -32,8 +32,8 @@ class MarkdownTests(unittest.TestCase):
         html = render("# One\n## Two\n\nSome **bold** and *italic* and `code <x>`.\n\n"
                       "- a\n  - nested\n- b\n\n1. first\n2. second\n\n> quoted\n\n---\n\n"
                       "| h1 | h2 |\n|:--|--:|\n| x | y |\n")
-        self.assertIn("<h3 id='one'>One</h3>", html)
-        self.assertIn("<h4 id='two'>Two</h4>", html)
+        self.assertIn("<h2 id='one'>One</h2>", html)
+        self.assertIn("<h3 id='two'>Two</h3>", html)
         self.assertIn("<strong>bold</strong>", html)
         self.assertIn("<em>italic</em>", html)
         self.assertIn("<code>code &lt;x&gt;</code>", html)
@@ -63,9 +63,9 @@ class MarkdownTests(unittest.TestCase):
         text = (ROOT / "EVIDENCE_PROTOCOL.md").read_text(encoding="utf-8")
         html = render(text)
         self.assertGreater(len(html), 1000)
-        self.assertIn("<h3", html)
+        self.assertIn("<h2", html)
         self.assertNotIn("<script", html)
-        self.assertNotRegex(html, r"<(?!/?(?:p|br|h[3-6]|ul|ol|li|a|em|strong|code|pre|blockquote|hr|div|table|thead|tbody|tr|th|td)\b)[a-z]")
+        self.assertNotRegex(html, r"<(?!/?(?:p|br|h[2-6]|ul|ol|li|a|em|strong|code|pre|blockquote|hr|div|table|thead|tbody|tr|th|td)\b)[a-z]")
 
 
 if __name__ == "__main__":

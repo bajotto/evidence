@@ -111,7 +111,7 @@ def page(title: str, body: str, csrf: str = "", status: int = 200, admin: bool =
                f"<ul class='links'>{links}</ul><ul class='account'>{who}{logout}</ul></nav></header>")
         flash = _FLASH.get()
         notice = f"<p class='flash' role='status'>{e(flash)}</p>" if flash else ""
-        content = f"{top}<main class='container'>{notice}{body}</main>"
+        content = f"<a class='skip' href='#main'>Skip to content</a>{top}<main id='main' class='container'>{notice}{body}</main>"
     else:
         content = body
     nonce = secrets.token_urlsafe(16)
@@ -238,7 +238,7 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
         problem = {"denied": "This Google account is not authorised. Ask an administrator to add your email.",
                    "state": "The sign-in expired or was interrupted. Please try again."}.get(request.query_params.get("e", ""))
         note = f"<p class='err' role='alert'>{e(problem)}</p>" if problem else ""
-        body = ("<main class='login'><article>"
+        body = ("<main id='main' class='login'><article><h1 class='sr-only'>Sign in to Evidence</h1>"
                 f"<img src='/ui/static/logo.png?v={ASSET_V}' alt='Evidence' width='260'>"
                 f"<p class='tagline'>Shared protocols and secrets for your AI agents.</p>"
                 f"<a role='button' class='google' href='/ui/login/google'>{GOOGLE_G}<span>Sign in with Google</span></a>"
@@ -312,7 +312,7 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
         "if(q){q.addEventListener('input',filter);cat.addEventListener('change',filter);}")
 
     def head(title: str, actions: str = "", sub: str = "") -> str:
-        return (f"<div class='page-head'><div><h2>{e(title)}</h2>{f'<p class=muted>{sub}</p>' if sub else ''}</div>"
+        return (f"<div class='page-head'><div><h1>{e(title)}</h1>{f'<p class=muted>{sub}</p>' if sub else ''}</div>"
                 f"<div class='page-actions'>{actions}</div></div>")
 
     def category_options(selected: str = "") -> str:
@@ -519,7 +519,7 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
         table = (f"<table class='striped'><tr><th>Label</th><th>Ends with</th><th>Created</th><th>Last used</th><th></th></tr>{rows}</table>{more}"
                  if rows else "<p class='muted'>You have not generated an Evidence secret yet.</p>")
         gen = form_html("/ui/token/new", csrf, {}, "Generate Evidence secret", False,
-                        "<input name='label' placeholder='Where will you use it? (laptop, CI...)' maxlength='100'>")
+                        "<input name='label' aria-label='Where will you use it' placeholder='Where will you use it? (laptop, CI...)' maxlength='100'>")
         how = (f"<pre><code>export EVIDENCE_TOKEN=&lt;your Evidence secret&gt;\n"
                f"python3 evidence_install.py join --target . --agent claude --service-url {e(origin)}/mcp\n"
                f"python3 evidence_install.py run --target . -- ./your-command</code></pre>")
@@ -579,7 +579,7 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                      f"{form_html('/ui/users/delete', csrf, {'subject': sub}, 'Delete', confirm='Delete this user? This cannot be undone.', cls='danger')}</td></tr>")
         create = ("<details class='create'><summary role='button'>+ New user</summary>"
                   + form_html("/ui/users", csrf, {}, "Create user", False,
-                              "<input name='email' type='email' placeholder='Google email' required> <input name='display_name' placeholder='Name'>")
+                              "<input name='email' type='email' aria-label='Google email' placeholder='Google email' required> <input name='display_name' aria-label='Name' placeholder='Name'>")
                   + "<p class='muted'>They sign in with that Google account, then generate their own Evidence secret.</p></details>")
         body = (f"{notice}" + head("Users", sub="People who can sign in. Unknown Google accounts are refused.") + create
                 + f"<table class='striped'><tr><th>User</th><th>Status</th><th>Evidence secrets</th><th></th></tr>{rows}</table>")
@@ -639,7 +639,7 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                        for c in store.list_categories())
         create = ("<details class='create'><summary role='button'>+ New category</summary>"
                   + form_html("/ui/categories", sess["csrf"], {}, "Add category", False,
-                              "<input name='name' placeholder='name (lowercase)' required pattern='[a-z0-9][a-z0-9-]*'> <input name='description' placeholder='Description'>")
+                              "<input name='name' aria-label='Category name' placeholder='name (lowercase)' required pattern='[a-z0-9][a-z0-9-]*'> <input name='description' aria-label='Description' placeholder='Description'>")
                   + "</details>")
         body = (head("Categories", sub="Secrets are grouped into categories. Share a whole category with a project, and give non-owner members the categories they may read.")
                 + create + f"<table class='striped'><tr><th>Category</th><th>Description</th></tr>{rows}</table>")
@@ -672,7 +672,7 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                      f"<td class='row-actions'><a role='button' class='compact' href='/ui/protocol?slug={e(urllib.parse.quote(p['slug']))}'>Protocol</a> {manage}</td></tr>")
         create = ("<details class='create'><summary role='button'>+ New project</summary>"
                   + form_html("/ui/projects", csrf, {}, "Create project", False,
-                              "<input name='slug' placeholder='slug (lowercase)' required> <input name='name' placeholder='Name' required>")
+                              "<input name='slug' aria-label='Project slug' placeholder='slug (lowercase)' required> <input name='name' aria-label='Project name' placeholder='Name' required>")
                   + "</details>") if admin else ""
         empty = ("<article class='empty'><h3>No projects yet</h3><p class='muted'>Add a repository from your terminal with an AI agent: "
                  "the prompt is on the <a href='/ui/token'>Evidence secret</a> page. The project appears here once it is registered.</p></article>")
