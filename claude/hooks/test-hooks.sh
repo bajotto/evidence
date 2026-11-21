@@ -8,7 +8,20 @@ set -uo pipefail
 HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
 SYNC="$HOOKS_DIR/sync-windsurf-rules.sh"
 SESSION_START="$HOOKS_DIR/session-start-protocol-global.sh"
-GLOBAL_RULES="/home/main/.codeium/windsurf/memories/global_rules.md"
+GLOBAL_RULES="$HOME/.codeium/windsurf/memories/global_rules.md"
+
+# Synthetic protocols (no real project needed). mkproto DIR [EXTRA_KB] writes DIR/EVIDENCE_PROTOCOL.md.
+mkproto() {
+  mkdir -p "$1"
+  {
+    printf '# Demo - Evidence Protocol\n\n**Current phase:** 1\n**Last updated:** 2026-01-01\n**Current status:** demo fixture\n\n'
+    printf '## 1. Testable hypotheses\n\n### H1: demo claim\n**Status:** open\n\n## 2. Phases\n\n### Phase 1 - Discovery\nRead-only.\n\n### Phase 2 - Pilot\nTest 3-5 cases.\n\n## 3. Incident log\n\n'
+    if [ "${2:-0}" -gt 0 ]; then head -c "$(( $2 * 1024 ))" /dev/zero | tr '\0' 'x' | fold -w 100; echo; fi
+  } > "$1/EVIDENCE_PROTOCOL.md"
+}
+BIG_DIR="$(mktemp -d)"; SMALL_DIR="$(mktemp -d)"
+mkproto "$SMALL_DIR"; mkproto "$BIG_DIR" 800
+trap 'rm -rf "$BIG_DIR" "$SMALL_DIR"' EXIT
 
 PASS=0
 FAIL=0
@@ -71,7 +84,7 @@ PROJECT_COUNT=$(echo "$OUTPUT" | grep -c '=== Project:')
                             || fail "only $PROJECT_COUNT projects discovered (Bug 2 regression)"
 
 # --- 4. session-start-protocol-global.sh: produces valid JSON ---
-JSON=$(echo '{"cwd":"/home/main/code/evidence"}' | bash "$SESSION_START" 2>/dev/null)
+JSON=$(printf '{"cwd":"%s"}' "$SMALL_DIR" | bash "$SESSION_START" 2>/dev/null)
 echo "$JSON" | jq -e '.hookSpecificOutput.hookEventName == "SessionStart"' >/dev/null 2>&1 \
   && pass "session-start produces valid JSON with SessionStart event" \
   || fail "session-start JSON invalid"
@@ -86,7 +99,7 @@ esac
 # --- 6. protocol-header.sh: generates a bounded, readable, indexed header ---
 HEADER="$HOOKS_DIR/protocol-header.sh"
 FIXTURE=$(mktemp)
-cp /path/to/project/EVIDENCE_PROTOCOL.md "$FIXTURE"
+cp "$SMALL_DIR/EVIDENCE_PROTOCOL.md" "$FIXTURE"
 BEFORE=$(sha256sum "$FIXTURE" | cut -d' ' -f1)
 bash "$HEADER" sync "$FIXTURE" >/dev/null 2>&1 && pass "header sync succeeds" || fail "header sync failed"
 bash "$HEADER" check "$FIXTURE" >/dev/null 2>&1 && pass "header check succeeds" || fail "header check failed"
@@ -99,7 +112,7 @@ AFTER2=$(sha256sum "$FIXTURE" | cut -d' ' -f1)
 rm -f "$FIXTURE"
 
 # --- 7. protocol-header.sh: injects current state on every prompt ---
-PROMPT_JSON=$(printf '%s' '{"cwd":"/path/to/project","hook_event_name":"UserPromptSubmit"}' | bash "$HEADER" hook 2>/dev/null)
+PROMPT_JSON=$(printf '{"cwd":"%s","hook_event_name":"UserPromptSubmit"}' "$BIG_DIR" | bash "$HEADER" hook 2>/dev/null)
 PROMPT_CONTEXT=$(echo "$PROMPT_JSON" | jq -r '.hookSpecificOutput.additionalContext')
 echo "$PROMPT_JSON" | jq -e '.hookSpecificOutput.hookEventName == "UserPromptSubmit"' >/dev/null 2>&1 \
   && pass "UserPromptSubmit produces valid hook output" || fail "UserPromptSubmit output invalid"
@@ -111,21 +124,21 @@ esac
 # --- 8. protocol-header.sh: PostToolUse auto-syncs protocol edits ---
 POST_DIR=$(mktemp -d)
 POST_FIXTURE="$POST_DIR/EVIDENCE_PROTOCOL.md"  # the hook only acts on files with this exact name
-cp /path/to/project/EVIDENCE_PROTOCOL.md "$POST_FIXTURE"
+cp "$SMALL_DIR/EVIDENCE_PROTOCOL.md" "$POST_FIXTURE"
 rm -f "$POST_FIXTURE.tmp"
 printf '%s' "{\"cwd\":\"/tmp\",\"hook_event_name\":\"PostToolUse\",\"tool_name\":\"edit\",\"tool_input\":{\"file_path\":\"$POST_FIXTURE\"}}" | bash "$HEADER" hook >/dev/null 2>&1
 bash "$HEADER" check "$POST_FIXTURE" >/dev/null 2>&1 && pass "PostToolUse keeps edited protocol valid" || fail "PostToolUse did not validate protocol"
 rm -f "$POST_FIXTURE"
 
 # --- 9. session-start-protocol-global.sh: current header replaces body cap ---
-JOBS_JSON=$(echo '{"cwd":"/path/to/project"}' | bash "$SESSION_START" 2>/dev/null)
-JOBS_CONTEXT=$(echo "$JOBS_JSON" | jq -r '.hookSpecificOutput.additionalContext')
-case "$JOBS_CONTEXT" in
+BIG_JSON=$(printf '{"cwd":"%s"}' "$BIG_DIR" | bash "$SESSION_START" 2>/dev/null)
+BIG_CONTEXT=$(echo "$BIG_JSON" | jq -r '.hookSpecificOutput.additionalContext')
+case "$BIG_CONTEXT" in
   *'CURRENT PROTOCOL HEADER'*'## Phase index'*) pass "SessionStart injects readable header for large protocol";;
   *) fail "SessionStart missing readable header for large protocol";;
 esac
-JOBS_SIZE=$(echo -n "$JOBS_CONTEXT" | wc -c)
-[ "$JOBS_SIZE" -lt 30000 ] && pass "SessionStart context is bounded (${JOBS_SIZE} bytes)" || fail "SessionStart context unexpectedly large (${JOBS_SIZE} bytes)"
+BIG_SIZE=$(echo -n "$BIG_CONTEXT" | wc -c)
+[ "$BIG_SIZE" -lt 30000 ] && pass "SessionStart context is bounded (${BIG_SIZE} bytes)" || fail "SessionStart context unexpectedly large (${BIG_SIZE} bytes)"
 
 # --- 10. session-start-protocol-global.sh: uses mktemp, not hardcoded /tmp path (Issue 4) ---
 assert_not_contains "$SESSION_START" '/tmp/session-state.err' "no hardcoded /tmp/session-state.err path"

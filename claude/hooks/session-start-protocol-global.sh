@@ -138,5 +138,5 @@ $STATE_ERR"
 fi
 
 # Use stdin instead of --arg to avoid ARG_MAX overflow on large protocols
-# (e.g. large-project EVIDENCE_PROTOCOL.md is ~722KB)
+# (e.g. a large protocol can be ~700KB)
 printf '%s' "$CONTEXT" | jq -R -n --rawfile ctx /dev/stdin '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}'

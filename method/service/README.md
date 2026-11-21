@@ -1,4 +1,22 @@
-# Central Evidence service — pilot implementation
+# Central Evidence service
+
+## Quick start (Google login + personal keys, no identity server)
+
+This is the simplest complete setup: PostgreSQL, the service, the web UI at `/ui` and the secrets vault.
+
+1. Get the files: `git clone` this repository, or `python3 evidence_install.py server --target /srv/evidence` and `cd /srv/evidence/evidence-server`.
+2. `cp .env.example .env` and fill it in. Required: the database passwords, `MCP_PUBLIC_URL`, `MCP_ALLOWED_HOSTS`, `VAULT_MASTER_KEY`
+   (`python3 -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())"`), `UI_SESSION_SECRET`, `GOOGLE_CLIENT_ID`,
+   `GOOGLE_CLIENT_SECRET` and `ADMIN_EMAILS`. The Keycloak variables are only needed for the optional overlay below.
+3. Create a Google OAuth client (Web application) with redirect URI `https://<your-host>/ui/callback`.
+4. `docker compose up -d --build` (from `method/service/` in a clone, or from `evidence-server/`). Put your own TLS reverse proxy in front of `127.0.0.1:8000`.
+5. Open `https://<your-host>/ui`, sign in with an `ADMIN_EMAILS` account, create an **Evidence secret**, then in any repository run
+   `EVIDENCE_TOKEN=evk_... python3 evidence_install.py join --target . --agent claude --service-url https://<your-host>/mcp`.
+
+Using an external PostgreSQL instead of the bundled one: point `EVIDENCE_PGHOST`/`EVIDENCE_PGPORT` and the other `EVIDENCE_PG*` values at it and drop the `database` service.
+Optional Keycloak as an OAuth authorization server for MCP clients: `docker compose -f compose.yaml -f compose.keycloak.yaml up -d --build` (see the sections below; set the `KC_*`/`KEYCLOAK_*` variables).
+
+# Keycloak overlay and pilot notes
 
 This mode stores the authoritative Markdown protocol and its revisions in PostgreSQL. Clients connect to the remote MCP endpoint over HTTPS/Streamable HTTP; each tool call is authenticated and authorized by project membership. A local `EVIDENCE_PROTOCOL.md` is not read by the central service.
 
@@ -9,7 +27,7 @@ This implementation is a **development pilot, not production-ready**. The Compos
 - `remote_mcp_server.py`: Streamable HTTP MCP resource server.
 - `store.py` and `schema.sql`: PostgreSQL project records, memberships, current protocol, immutable revisions, approvals, and audit events.
 - `oidc.py`: validates RS256 bearer tokens against the configured Keycloak issuer/JWKS, audience, expiry, subject, and scopes.
-- `compose.yaml`: Evidence PostgreSQL, Keycloak with a separate PostgreSQL database, and the MCP app. Neither database is host-published; Keycloak and MCP bind to host loopback for separate HTTPS reverse proxies.
+- `compose.yaml`: Evidence PostgreSQL and the MCP app; `compose.keycloak.yaml`: optional Keycloak with its own PostgreSQL database. Neither database is host-published; Keycloak and MCP bind to host loopback for separate HTTPS reverse proxies.
 - `evidence_install.py`: safe project-configuration and service-bundle installer modes.
 
 Keycloak is the MCP OAuth authorization server and can federate users to Google. Google OIDC alone is not the MCP authorization server. The operator configures Google in Keycloak, grants the appropriate scopes, and sets client-registration policies. The service validates access tokens; it does not issue them or automatically configure the Google application/realm.
@@ -33,7 +51,7 @@ Configure DNS/TLS and a reverse proxy for both URLs. Register this Google OAuth 
 {OIDC_PUBLIC_URL}/realms/evidence/broker/google/endpoint
 ```
 
-Then start the local stack in staging and use the Keycloak admin console to create the `evidence` realm, configure the Google identity provider, and configure the MCP client-registration policy. Create/assign `evidence:access` to normal users and `evidence:admin` only to service administrators. Map the `evidence-mcp` audience into access tokens. Follow Keycloak's [MCP authorization guide](https://www.keycloak.org/securing-apps/mcp-authz-server), especially its trusted-host and dynamic client-registration policy guidance; do not allow unrestricted public registration.
+Then start the stack with the Keycloak overlay in staging and use the Keycloak admin console to create the `evidence` realm, configure the Google identity provider, and configure the MCP client-registration policy. Create/assign `evidence:access` to normal users and `evidence:admin` only to service administrators. Map the `evidence-mcp` audience into access tokens. Follow Keycloak's [MCP authorization guide](https://www.keycloak.org/securing-apps/mcp-authz-server), especially its trusted-host and dynamic client-registration policy guidance; do not allow unrestricted public registration.
 
 Keycloak's MCP conformance varies by specification revision; the current docs list gaps around Resource Indicators in newer revisions. Live client compatibility is a release gate. If a client cannot complete OAuth against this Keycloak version, stop and evaluate an authorization server that supports that client's required revision before scale.
 

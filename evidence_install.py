@@ -184,35 +184,32 @@ def merge_managed_section(path: Path, section: str) -> str:
     return existing.rstrip() + ("\n\n" if existing.strip() else "") + section
 
 
-def server_bundle() -> dict[str, str]:
-    paths = [
-        "method/__init__.py",
-        "method/protocol-header.sh",
-        "method/protocol-search.sh",
-        "method/service/__init__.py",
-        "method/service/remote_mcp_server.py",
-        "method/service/oidc.py",
-        "method/service/store.py",
-        "method/service/ui.py",
-        "method/service/vault_crypto.py",
-        "method/service/schema.sql",
-        "method/service/requirements.txt",
-    ]
-    bundle = {relative: (ROOT / relative).read_text(encoding="utf-8") for relative in paths}
-    bundle["Dockerfile"] = (ROOT / "method/service/Dockerfile").read_text(encoding="utf-8")
-    compose = (ROOT / "method/service/compose.yaml").read_text(encoding="utf-8")
-    compose = compose.replace("context: ../..\n      dockerfile: method/service/Dockerfile", "context: .\n      dockerfile: Dockerfile")
-    bundle["compose.yaml"] = compose
-    bundle[".env.example"] = (ROOT / "method/service/.env.example").read_text(encoding="utf-8")
+def server_bundle() -> dict[str, str | bytes]:
+    service = ROOT / "method/service"
+    paths = ["method/__init__.py", "method/protocol-header.sh", "method/protocol-search.sh"]
+    paths += sorted(
+        str(f.relative_to(ROOT)) for f in service.rglob("*")
+        if f.is_file() and "__pycache__" not in f.parts and f.suffix in {".py", ".sql", ".css", ".png"} | {""}
+        and not f.name.startswith("test_") and f.name not in {"compose.yaml", "Dockerfile"}
+    ) + ["method/service/requirements.txt"]
+    bundle: dict[str, str | bytes] = {}
+    for relative in dict.fromkeys(paths):
+        data = (ROOT / relative).read_bytes()
+        bundle[relative] = data if relative.endswith(".png") else data.decode("utf-8")
+    bundle["Dockerfile"] = (service / "Dockerfile").read_text(encoding="utf-8")
+    for name in ("compose.yaml", "compose.keycloak.yaml"):
+        text = (service / name).read_text(encoding="utf-8")
+        bundle[name] = text.replace("context: ../..\n      dockerfile: method/service/Dockerfile", "context: .\n      dockerfile: Dockerfile")
+    bundle[".env.example"] = (service / ".env.example").read_text(encoding="utf-8")
     return bundle
 
 
-def server_config(target: Path) -> dict[Path, str]:
+def server_config(target: Path) -> dict[Path, str | bytes]:
     destination = target / "evidence-server"
     return {destination / relative: content for relative, content in server_bundle().items()}
 
 
-def apply_changes(outputs: dict[Path, str], dry_run: bool, target_root: Path) -> None:
+def apply_changes(outputs: dict[Path, str | bytes], dry_run: bool, target_root: Path) -> None:
     root = target_root.resolve(strict=True)
     changes = []
     for path, content in outputs.items():
@@ -223,7 +220,7 @@ def apply_changes(outputs: dict[Path, str], dry_run: bool, target_root: Path) ->
         if path.exists():
             if not path.is_file():
                 raise ValueError(f"refusing to replace non-file path {path}")
-            current = path.read_text(encoding="utf-8")
+            current = path.read_bytes() if isinstance(content, bytes) else path.read_text(encoding="utf-8")
             if current == content:
                 continue
             if path.name not in {".mcp.json", "mcp.json", "mcp_config.json", "config.toml", "AGENTS.md"}:
@@ -243,7 +240,7 @@ def apply_changes(outputs: dict[Path, str], dry_run: bool, target_root: Path) ->
                 raise ValueError(f"refusing to write outside target directory: {path}")
             mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
             fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
-            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            with os.fdopen(fd, "wb" if isinstance(content, bytes) else "w", **({} if isinstance(content, bytes) else {"encoding": "utf-8"})) as stream:
                 stream.write(content)
             os.chmod(tmp_name, mode)
             staged.append((Path(tmp_name), path))

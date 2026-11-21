@@ -12,8 +12,8 @@
 # when content changes).
 set -euo pipefail
 
-CANONICAL_DIR="/home/main/.claude"
-WINDSURF_GLOBAL="/home/main/.codeium/windsurf/memories/global_rules.md"
+CANONICAL_DIR="$HOME/.claude"
+WINDSURF_GLOBAL="$HOME/.codeium/windsurf/memories/global_rules.md"
 GLOBAL_METHOD="$CANONICAL_DIR/GLOBAL_EVIDENCE.md"
 EVIDENCE_METHOD="$CANONICAL_DIR/EVIDENCE.md"
 README_SESSIONS="$CANONICAL_DIR/README_SESSIONS.md"
@@ -26,11 +26,11 @@ if [ -f "$LOG_FILE" ] && [ "$(wc -c < "$LOG_FILE")" -gt 1048576 ]; then
   mv "$LOG_FILE" "$LOG_FILE.1"
 fi
 
-# Auto-discover projects: any dir under /home/main/code with a EVIDENCE_PROTOCOL.md
+# Auto-discover projects: any dir under "$HOME/code" with a EVIDENCE_PROTOCOL.md
 PROJECTS=()
 while IFS= read -r p; do
   PROJECTS+=("$(dirname "$p")")
-done < <(find /home/main/code -maxdepth 2 -name EVIDENCE_PROTOCOL.md 2>/dev/null)
+done < <(find "$HOME/code" -maxdepth 2 -name EVIDENCE_PROTOCOL.md 2>/dev/null)
 
 # --- Helper: extract a markdown section at any header level ----------
 # Matches the first header line matching $2 (regex), outputs until the next

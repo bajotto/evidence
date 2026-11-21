@@ -1,0 +1,51 @@
+# Optional: adds Keycloak as an OAuth authorization server for MCP clients.
+# Use: docker compose -f compose.yaml -f compose.keycloak.yaml up -d
+services:
+  identity-database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:?set KC_DB_PASSWORD in .env}
+    volumes:
+      - identity_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [private]
+
+  identity:
+    image: quay.io/keycloak/keycloak:26.6.4
+    restart: unless-stopped
+    command: ["start"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL_HOST: ${KEYCLOAK_PGHOST:?set KEYCLOAK_PGHOST in .env}
+      KC_DB_URL_PORT: ${KEYCLOAK_PGPORT:-5432}
+      KC_DB_URL_DATABASE: ${KEYCLOAK_PGDATABASE:?set KEYCLOAK_PGDATABASE in .env}
+      KC_DB_USERNAME: ${KEYCLOAK_PGUSER:?set KEYCLOAK_PGUSER in .env}
+      KC_DB_PASSWORD: ${KEYCLOAK_PGPASSWORD:?set KEYCLOAK_PGPASSWORD in .env}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:?set KC_BOOTSTRAP_ADMIN_USERNAME in .env}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:?set KC_BOOTSTRAP_ADMIN_PASSWORD in .env}
+      KC_HOSTNAME: ${OIDC_PUBLIC_URL:?set OIDC_PUBLIC_URL in .env}
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8081:8080"
+    networks: [private]
+
+  evidence:
+    environment:
+      MCP_OIDC_ISSUER_URL: ${OIDC_PUBLIC_URL:?set OIDC_PUBLIC_URL in .env}/realms/evidence
+      MCP_OIDC_JWKS_URL: http://identity:8080/realms/evidence/protocol/openid-connect/certs
+      MCP_OIDC_AUDIENCE: evidence-mcp
+    depends_on:
+      identity:
+        condition: service_started
+
+volumes:
+  identity_data:

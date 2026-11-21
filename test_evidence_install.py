@@ -127,6 +127,10 @@ class InstallerTests(unittest.TestCase):
 
     def test_server_bundle_is_self_hosted_and_does_not_create_secrets(self):
         outputs = server_config(self.target)
+        names = {path.relative_to(self.target / "evidence-server").as_posix() for path in outputs}
+        for needed in ("method/service/markdown_view.py", "method/service/static/logo.png", "compose.keycloak.yaml"):
+            self.assertIn(needed, names)
+        self.assertFalse([n for n in names if "test_" in n or n.endswith(".md")])
         self.assertIn(self.target / "evidence-server" / "compose.yaml", outputs)
         self.assertIn(self.target / "evidence-server" / "Dockerfile", outputs)
         compose = outputs[self.target / "evidence-server" / "compose.yaml"]
