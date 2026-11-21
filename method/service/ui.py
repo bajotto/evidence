@@ -69,7 +69,11 @@ BASE_JS = (
     "if(id)document.getElementById(id).classList.toggle('masked',t.checked);});"
     "document.addEventListener('click',async e=>{const b=e.target.closest('button[data-copy]');if(!b)return;"
     "await navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent);"
-    "const t=b.textContent;b.textContent='Copied';setTimeout(()=>b.textContent=t,1500);});")
+    "const t=b.textContent;b.textContent='Copied';setTimeout(()=>b.textContent=t,1500);});"
+    "document.querySelectorAll('textarea[data-autoload]').forEach(async t=>{t.disabled=true;try{"
+    "const r=await fetch('/ui/vault/value',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},"
+    "body:new URLSearchParams({csrf:document.body.dataset.csrf,name:t.dataset.autoload})});"
+    "if(r.ok){t.value=(await r.json()).value;t.defaultValue=t.value;}}finally{t.disabled=false;}});")
 NAV_FOR = (("/ui/vault", "secrets"), ("/ui/secret", "secrets"), ("/ui/token", "token"), ("/ui/users", "users"),
            ("/ui/tokens", "users"), ("/ui/project", "projects"), ("/ui/protocol", "projects"), ("/ui/categories", "categories"))
 GOOGLE_G = (
@@ -435,9 +439,10 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                 f"<input type='hidden' name='name' value='{e(name)}'>"
                 f"<div class='grid'><label>Category<select name='category'>{category_options(shares['category'])}</select></label>"
                 f"<label>Description<input name='description' maxlength='500' value='{e(shares['description'])}'></label></div>"
-                f"<label>New value <small>(leave empty to keep the current one)</small>"
-                f"<textarea id='new-value' name='value' class='mono' rows='6' spellcheck='false' autocomplete='off' autocapitalize='off'></textarea></label>"
-                f"<label class='check'><input type='checkbox' data-mask='new-value'> Hide characters while I type</label>"
+                f"<label>Value <small>(loaded from the vault; every load is logged)</small>"
+                f"<textarea id='new-value' name='value' class='mono masked' rows='6' spellcheck='false' autocomplete='off' autocapitalize='off' "
+                f"data-autoload='{e(name)}'></textarea></label>"
+                f"<label class='check'><input type='checkbox' data-mask='new-value' checked> Hide characters</label>"
                 f"<button>Save changes</button></form>")
             sharing = (f"<form method='post' action='/ui/secret/share'><input type='hidden' name='csrf' value='{e(csrf)}'>"
                        f"<input type='hidden' name='name' value='{e(name)}'>"
@@ -463,8 +468,11 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
 
     def secret_update(sess, f):
         raw = f.get("value", "")
+        value = clean_value(raw) if raw.strip() else None
+        if value is not None and value == store.vault_get(f["name"], sess["sub"]).replace("\r\n", "\n"):
+            value = None  # editor was prefilled and left alone: keep the revision
         store.vault_update(f["name"], sess["sub"], sess["admin"], category=f["category"],
-                           description=f.get("description", ""), value=clean_value(raw) if raw.strip() else None)
+                           description=f.get("description", ""), value=value)
         return back(f"/ui/secret?name={urllib.parse.quote(f['name'])}", "saved")
 
     @app.custom_route("/ui/secret/update", methods=["POST"], include_in_schema=False)
@@ -633,7 +641,7 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                   + form_html("/ui/categories", sess["csrf"], {}, "Add category", False,
                               "<input name='name' placeholder='name (lowercase)' required pattern='[a-z0-9][a-z0-9-]*'> <input name='description' placeholder='Description'>")
                   + "</details>")
-        body = (head("Categories", sub="Secrets are grouped into categories. Project members read the categories they were granted.")
+        body = (head("Categories", sub="Secrets are grouped into categories. Share a whole category with a project, and give non-owner members the categories they may read.")
                 + create + f"<table class='striped'><tr><th>Category</th><th>Description</th></tr>{rows}</table>")
         return page("Categories", body, sess["csrf"], admin=True)
 
