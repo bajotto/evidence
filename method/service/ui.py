@@ -304,12 +304,12 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
         "setTimeout(()=>b.textContent=t,1500);}"
         "else{out.textContent=v;out.hidden=false;b.textContent='Hide';b.setAttribute('aria-expanded','true');"
         "setTimeout(()=>{out.hidden=true;out.textContent='';b.textContent='Reveal';b.setAttribute('aria-expanded','false');},30000);}});"
-        "const q=document.getElementById('q'),cat=document.getElementById('cat'),cards=[...document.querySelectorAll('.secret')],"
+        "const q=document.getElementById('q'),cat=document.getElementById('cat'),proj=document.getElementById('proj'),cards=[...document.querySelectorAll('.secret')],"
         "count=document.getElementById('count');"
-        "function filter(){const t=(q.value||'').toLowerCase(),c=cat.value;let n=0;cards.forEach(a=>{"
-        "const ok=(!t||a.dataset.search.includes(t))&&(!c||a.dataset.cat===c);a.hidden=!ok;if(ok)n++;});"
+        "function filter(){const t=(q.value||'').toLowerCase(),c=cat.value,p=proj.value;let n=0;cards.forEach(a=>{"
+        "const ok=(!t||a.dataset.search.includes(t))&&(!c||a.dataset.cat===c)&&(!p||a.dataset.projects.split(' ').includes(p));a.hidden=!ok;if(ok)n++;});"
         "count.textContent=n+' of '+cards.length+' secret'+(cards.length===1?'':'s');}"
-        "if(q){q.addEventListener('input',filter);cat.addEventListener('change',filter);}")
+        "if(q){q.addEventListener('input',filter);cat.addEventListener('change',filter);proj.addEventListener('change',filter);}")
 
     def head(title: str, actions: str = "", sub: str = "") -> str:
         return (f"<div class='page-head'><div><h1>{e(title)}</h1>{f'<p class=muted>{sub}</p>' if sub else ''}</div>"
@@ -350,9 +350,9 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
             manage = (f"<a role='button' class='outline secondary compact' href='/ui/secret?name={e(urllib.parse.quote(it['name']))}'>Manage</a>"
                       if it["mine"] or sess["admin"] else "")
             desc = f"<p class='desc'>{e(it['description'])}</p>" if it["description"] else ""
-            search = " ".join([it["name"], it["description"], it["category"], str(it["owner"]), *it["projects"]]).lower()
+            search = " ".join([it["name"], it["description"] or "", it["category"], str(it["owner"])]).lower()
             cards += (
-                f"<article class='secret' data-name='{e(it['name'])}' data-cat='{e(it['category'])}' data-search='{e(search)}'>"
+                f"<article class='secret' data-name='{e(it['name'])}' data-cat='{e(it['category'])}' data-search='{e(search)}' data-projects='{e(" ".join(it["projects"]))}'>"
                 f"<header><div class='title'><strong class='sname'>{e(it['name'])}</strong>"
                 f"<span class='badge cat'>{e(it['category'])}</span></div>"
                 f"<div class='actions'><button data-act='reveal' aria-expanded='false'>Reveal</button><button data-act='copy' class='outline'>Copy</button>{manage}</div></header>"
@@ -361,9 +361,11 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                 f"Shared with:</small> {shared} <small class='muted'>&middot; updated {e(it['updated_at'][:10])}</small></p>"
                 f"<pre class='val' aria-live='polite' hidden></pre></article>")
         cats = sorted({it["category"] for it in items})
-        toolbar = (f"<div class='toolbar'><input id='q' type='search' placeholder='Search by name, description or project' aria-label='Search secrets'>"
+        toolbar = (f"<div class='toolbar'><input id='q' type='search' placeholder='Search by name, description or category' aria-label='Search secrets'>"
                    f"<select id='cat' aria-label='Category'><option value=''>All categories</option>"
-                   + "".join(f"<option>{e(c)}</option>" for c in cats) + "</select></div>"
+                   + "".join(f"<option>{e(c)}</option>" for c in cats) + "</select>"
+                   "<select id='proj' aria-label='Project'><option value=''>All projects</option>"
+                   + "".join(f"<option>{e(x)}</option>" for x in sorted({p for it in items for p in it["projects"]})) + "</select></div>"
                    f"<p id='count' class='muted'>{len(items)} of {len(items)} secret{'' if len(items) == 1 else 's'}</p>") if items else ""
         empty = ("<article class='empty'><h3>No secrets yet</h3><p class='muted'>Store passwords, API keys, certificates or whole .env "
                  "files, then share them with projects and people. Nothing is shown until someone asks to reveal or copy it.</p>"
