@@ -175,6 +175,21 @@ class VaultStoreTests(unittest.TestCase):
         with self.assertRaises(AccessDenied):
             self.store.share_into_project([a], self.slug_b, self.m1)  # reader of B cannot share into it
 
+    def test_share_by_category_covers_present_and_future_secrets_of_the_owner(self):
+        old, later, other = self.n("CO"), self.n("CL"), self.n("CX")
+        self.store.vault_put(old, "env", "v1", self.owner)
+        self.store.vault_put(other, "env", "vx", self.m1)  # someone else's secret in the same category
+        self.store.set_project_categories(self.slug_a, ["env"], self.owner)
+        self.store.vault_put(later, "env", "v2", self.owner)  # added after the category was shared
+        self.assertEqual(sorted(x["name"] for x in self.store.vault_list(self.owner, False, self.slug_a)), sorted([old, later]))
+        self.assertEqual(self.store.vault_get(later, self.powner, self.slug_a), "v2")  # project owner reads via the project
+        with self.assertRaises(AccessDenied):
+            self.store.vault_get(other, self.powner, self.slug_a)  # not the sharer's secret
+        self.store.set_project_categories(self.slug_a, [], self.owner)
+        self.assertEqual(self.store.vault_list(self.owner, False, self.slug_a), [])
+        with self.assertRaises(AccessDenied):
+            self.store.set_project_categories(self.slug_b, ["env"], self.m1)  # reader cannot share into B
+
     def test_ciphertext_at_rest_audit_and_admin_cannot_read(self):
         name = self.n("AT")
         self.store.vault_put(name, "env", "plain-value-9", self.owner)

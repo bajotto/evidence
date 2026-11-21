@@ -672,7 +672,7 @@ class Store:
                         (secret["id"], actor)).fetchone():
             return True
         return conn.execute(
-            "SELECT 1 FROM secret_project_shares sp JOIN project_memberships m "
+            "SELECT 1 FROM project_secret_scope sp JOIN project_memberships m "
             "ON m.project_id = sp.project_id AND m.subject = %s "
             "WHERE sp.secret_id = %s AND (m.role = 'owner' OR EXISTS ("
             "SELECT 1 FROM member_categories mc WHERE mc.project_id = sp.project_id AND mc.subject = m.subject "
@@ -797,7 +797,7 @@ class Store:
             for sec in secrets_:
                 readable = self._can_read(conn, sec, actor)
                 shared_projects = [r["slug"] for r in conn.execute(
-                    "SELECT p.slug FROM secret_project_shares sp JOIN projects p ON p.id = sp.project_id "
+                    "SELECT p.slug FROM project_secret_scope sp JOIN projects p ON p.id = sp.project_id "
                     "WHERE sp.secret_id = %s ORDER BY p.slug", (sec["id"],)).fetchall()]
                 if project_slug and project_slug not in shared_projects:
                     continue
@@ -825,7 +825,7 @@ class Store:
                     raise AccessDenied("secret not found or not shared with you")
             sec = self._secret_row(conn, name)
             in_scope = sec is not None and (project_id is None or conn.execute(
-                "SELECT 1 FROM secret_project_shares WHERE secret_id = %s AND project_id = %s",
+                "SELECT 1 FROM project_secret_scope WHERE secret_id = %s AND project_id = %s",
                 (sec["id"], project_id)).fetchone() is not None)
             if not in_scope or not self._can_read(conn, sec, actor):
                 raise AccessDenied("secret not found or not shared with you")  # same error: no existence oracle
@@ -914,6 +914,32 @@ class Store:
                          "VALUES (NULL, %s, 'vault.shared', %s)",
                          (actor, Jsonb({"name": name, "projects": sorted(wanted), "users": len(valid)})))
         return {"name": name, "projects": sorted(wanted), "users": len(valid)}
+
+    def set_project_categories(self, project_slug: str, categories: list[str], actor: str, is_admin: bool = False) -> dict:
+        """Make the project take all of the actor's secrets in these categories (present and future). Replaces the actor's choice."""
+        with self.connect() as conn:
+            project = self._manageable_projects(conn, actor, is_admin).get(project_slug)
+            if project is None:
+                raise AccessDenied("project not found, or not yours to share into")
+            ids = conn.execute("SELECT id, name FROM secret_categories WHERE name = ANY(%s)", (list(categories),)).fetchall()
+            if len(ids) != len(set(categories)):
+                raise ValueError("unknown category")
+            conn.execute("DELETE FROM project_category_shares WHERE project_id = %s AND owner_subject = %s", (project["id"], actor))
+            for row in ids:
+                conn.execute("INSERT INTO project_category_shares (project_id, category_id, owner_subject) VALUES (%s, %s, %s)",
+                             (project["id"], row["id"], actor))
+            conn.execute("INSERT INTO audit_events (project_id, actor_subject, event_type, details) VALUES (%s, %s, 'vault.categories_shared', %s)",
+                         (project["id"], actor, Jsonb({"categories": sorted(categories)})))
+        return {"project": project_slug, "categories": sorted(categories)}
+
+    def project_category_shares(self, project_slug: str) -> list[dict]:
+        """[{category, owner_subject, owner}] for a project; metadata only."""
+        with self.connect() as conn:
+            return [dict(r) for r in conn.execute(
+                "SELECT c.name AS category, pc.owner_subject, COALESCE(u.email, pc.owner_subject) AS owner "
+                "FROM project_category_shares pc JOIN projects p ON p.id = pc.project_id "
+                "JOIN secret_categories c ON c.id = pc.category_id LEFT JOIN users u ON u.subject = pc.owner_subject "
+                "WHERE p.slug = %s ORDER BY c.name, owner", (project_slug,)).fetchall()]
 
     def share_into_project(self, names: list[str], project_slug: str, actor: str, is_admin: bool = False) -> dict:
         """Add existing secrets to one project (keeps their other shares). Owner of each secret, or an admin."""

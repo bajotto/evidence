@@ -127,6 +127,21 @@ CREATE TABLE IF NOT EXISTS secret_project_shares (
     PRIMARY KEY (secret_id, project_id)
 );
 
+-- A project can take every secret of a category from one owner, including secrets added later.
+CREATE TABLE IF NOT EXISTS project_category_shares (
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    category_id INTEGER NOT NULL REFERENCES secret_categories(id) ON DELETE CASCADE,
+    owner_subject TEXT NOT NULL REFERENCES users(subject) ON UPDATE CASCADE ON DELETE CASCADE,
+    PRIMARY KEY (project_id, category_id, owner_subject)
+);
+
+-- Read side: which secrets a project holds, by explicit share or by category share.
+CREATE OR REPLACE VIEW project_secret_scope AS
+    SELECT secret_id, project_id FROM secret_project_shares
+    UNION
+    SELECT s.id, pc.project_id FROM project_category_shares pc
+    JOIN vault_secrets s ON s.category_id = pc.category_id AND s.owner_subject = pc.owner_subject;
+
 CREATE TABLE IF NOT EXISTS secret_user_shares (
     secret_id UUID NOT NULL REFERENCES vault_secrets(id) ON DELETE CASCADE,
     subject TEXT NOT NULL REFERENCES users(subject) ON DELETE CASCADE,

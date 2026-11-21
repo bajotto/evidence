@@ -856,11 +856,20 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                 for s in store.vault_list(sess["sub"], True, slug, include_unreadable=True))
             stable = (f"<table class='striped'><tr><th>Secret</th><th>Category</th><th>Owner</th><th></th></tr>{srows}</table>"
                       if srows else "<p class='muted'>Nothing is shared with this project yet, so this project reads no secrets.</p>")
+            cshares = store.project_category_shares(slug)
+            mine = {c["category"] for c in cshares if c["owner_subject"] == sess["sub"]}
+            cboxes = "".join(f"<label><input type='checkbox' name='cat' value='{e(c['name'])}'{' checked' if c['name'] in mine else ''}> {e(c['name'])}</label>" for c in cats)
+            crows = "".join(f"<span class='badge cat'>{e(c['category'])}</span> <small class='muted'>from {e(c['owner'])}</small> " for c in cshares)
+            catbox = ("<article><header>Share credentials by category</header>"
+                      "<p class='muted'>Tick a category and this project gets <strong>all your credentials in it</strong>, including ones you add later. "
+                      "Owners read them directly; other members still need the category under Members above.</p>"
+                      + form_html("/ui/project/vault/categories", csrf, {"slug": slug}, "Save", False, f"<div class='checks'>{cboxes}</div>")
+                      + (f"<p>{crows}</p>" if crows else "") + "</article>")
             loose = [s for s in store.vault_list(sess["sub"], True, None, include_unreadable=True) if slug not in s["projects"]]
             if loose:
                 picks = "".join(f"<label><input type='checkbox' name='name' value='{e(s['name'])}'> {e(s['name'])} "
                                 f"<span class='badge cat'>{e(s['category'])}</span></label>" for s in loose)
-                stable += ("<details class='create'><summary role='button'>+ Share existing secrets</summary>"
+                stable += ("<details class='create'><summary role='button'>+ Share single secrets</summary>"
                            + form_html("/ui/project/vault/share", csrf, {"slug": slug}, "Share selected", False, f"<div class='checks'>{picks}</div>")
                            + "</details>")
             audit = "".join(
@@ -871,6 +880,7 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                       "<p class='muted'>Categories only limit what non-owner members may read. They do not give the project any secret: "
                       "share secrets with it in the next section.</p>" + add_member
                     + f"<table class='striped'><tr><th>Member</th><th>Protocol</th><th>Categories they can read</th><th></th></tr>{mrows}</table></article>"
+                    + catbox
                     + f"<article><header>Secrets shared with this project "
                       f"<a role='button' class='compact' href='/ui/secret/new?project={e(urllib.parse.quote(slug))}'>+ New secret</a></header>{stable}</article>"
                     + f"<article><header>Activity</header><table class='striped'><tr><th>When</th><th>Event</th><th>Details</th></tr>{audit}</table></article>")
@@ -905,6 +915,10 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
     @app.custom_route("/ui/project/vault/delete", methods=["POST"], include_in_schema=False)
     async def vault_remove(request):
         return await project_action(lambda s, f: store.vault_delete(f["name"], s["sub"], True), "deleted")(request)
+
+    @app.custom_route("/ui/project/vault/categories", methods=["POST"], include_in_schema=False)
+    async def vault_categories(request):
+        return await project_action(lambda s, f: store.set_project_categories(f["slug"], f.getlist("cat"), s["sub"], True), "shared")(request)
 
     @app.custom_route("/ui/project/vault/share", methods=["POST"], include_in_schema=False)
     async def vault_share(request):
