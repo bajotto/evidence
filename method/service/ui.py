@@ -399,10 +399,10 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                 f"<small>Project owners always see everything in their project; other members see the categories they were granted.</small></label></div>"
                 f"<label>Description <small>(optional, not secret)</small><input name='description' maxlength='500' "
                 f"placeholder='What it is for and where it is used'></label>"
-                f"<label>Value<textarea id='secret-value' name='value' class='mono' rows='10' required spellcheck='false' "
+                f"<label>Value<textarea id='secret-value' name='value' class='mono masked' rows='10' required spellcheck='false' "
                 f"autocomplete='off' autocapitalize='off' placeholder='Paste the secret. Several lines are fine: SSH keys, certificates, JSON, .env blocks.'></textarea>"
                 f"<small>Line breaks are kept exactly as typed. It is encrypted before it is stored.</small></label>"
-                f"<label class='check'><input type='checkbox' data-mask='secret-value'> Hide characters while I type</label>"
+                f"<label class='check'><input type='checkbox' data-mask='secret-value' checked> Hide characters</label>"
                 f"{share_pickers(projects, people, picked_projects=(preselect,) if preselect else ())}"
                 f"<div class='form-actions'><button>Create secret</button><a role='button' class='outline secondary' href='/ui/vault'>Cancel</a></div></form>")
             body = (f"<p><a href='/ui/vault'>&larr; Secrets</a></p>"
@@ -574,7 +574,7 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
             who = u['email'] or u['subject']
             rows += (f"<tr><td><div class='usercell'><span class='avatar' aria-hidden='true'>{e(who[:1].upper())}</span>"
                      f"<div>{mail(who)}<br><small class='muted'>{e(u['display_name'] or '')}</small></div></div></td><td>{status}</td>"
-                     f"<td>{tok_html}{form_html('/ui/users/token', csrf, {'subject': sub}, 'New', )}</td><td class='row-actions'>"
+                     f"<td>{tok_html}{form_html('/ui/users/token', csrf, {'subject': sub}, 'New Evidence secret', cls='outline')}</td><td class='row-actions'>"
                      f"{form_html('/ui/users/toggle', csrf, {'subject': sub, 'disabled': '0' if u['disabled'] else '1'}, 'Enable' if u['disabled'] else 'Disable', cls='outline')}"
                      f"{form_html('/ui/users/delete', csrf, {'subject': sub}, 'Delete', confirm='Delete this user? This cannot be undone.', cls='danger')}</td></tr>")
         create = ("<details class='create'><summary role='button'>+ New user</summary>"
@@ -722,13 +722,14 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                 doc = store.get_revision(slug, int(rev), sess["sub"], sess["admin"])
                 banner = (f"<p class='flash'>You are reading revision {doc['revision']}, not the current one (revision {current['revision']}). "
                           f"<a href='/ui/protocol?slug={e(urllib.parse.quote(slug))}'>Back to the current protocol</a></p>")
-                sub = f"Revision {doc['revision']} &middot; {e(doc['created_at'][:16].replace('T', ' '))} by {mail(doc['actor_email'])}"
+                sub = f"Revision {doc['revision']} &middot; {e(doc['created_at'][:16].replace('T', ' '))}{' by ' + mail(doc['actor_email']) if doc['actor_email'] else ''}"
                 content, is_current = doc["content"], False
             else:
                 banner, is_current, content = "", True, current["content"]
                 store.touch_read(slug, sess["sub"], current["revision"], "web")
                 sub = (f"{e(slug)} &middot; revision {current['revision']} &middot; updated {e(latest['created_at'][:16].replace('T', ' '))}"
-                       f" by {mail(latest['actor_email'])} &mdash; {e(latest['summary'])}")
+                       f"{' by ' + mail(latest['actor_email'] or latest['actor_subject']) if (latest['actor_email'] or latest['actor_subject']) else ''}"
+                       f"{' &mdash; ' + e(latest['summary']) if latest['summary'] else ''}")
             body = (f"<p><a href='/ui/projects'>&larr; Projects</a></p>" + banner
                     + head(current["name"], protocol_tabs(slug, current["role"], sess["admin"], is_current), sub)
                     + sync_card(store.sync_status(slug, sess["sub"], sess["admin"]))
@@ -846,8 +847,9 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                 boxes = "".join(
                     f"<label><input type='checkbox' name='cat' value='{e(c['name'])}'"
                     f"{' checked' if c['name'] in granted.get(m['subject'], set()) else ''}> {e(c['name'])}</label>" for c in cats)
-                access = ("<span class='badge ok'>reads everything shared with the project</span>" if m["role"] == "owner" else
-                          form_html('/ui/project/grants', csrf, {'slug': slug, 'subject': m['subject']}, 'Save', extra=boxes))
+                access = ("<small class='mlabel muted'>Secrets they can read</small>"
+                          + ("<span class='badge ok'>reads everything shared with the project</span>" if m["role"] == "owner" else
+                          form_html('/ui/project/grants', csrf, {'slug': slug, 'subject': m['subject']}, 'Save', extra=boxes)))
                 mrows += (f"<tr><td>{mail(m['email'] or m['subject'])}<br><small class='muted'>{e(m['role'])}</small></td>"
                           f"<td>{sync_badge(sync[m['subject']])}</td><td>{access}</td><td>"
                           f"{form_html('/ui/project/member/remove', csrf, {'slug': slug, 'subject': m['subject']}, 'Remove', confirm='Remove this member?', cls='danger')}</td></tr>")
