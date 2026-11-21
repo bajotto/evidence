@@ -436,6 +436,14 @@ def central_context(manifest, event="", session_id=""):
         "`expected_revision` to edit (on a conflict, reread before retrying), `protocol_sync_status` to see who has read the current revision. "
         "A local EVIDENCE_PROTOCOL.md is only an export/snapshot."
     )
+    origin = service_url.rstrip("/").removesuffix("/mcp")
+    lines.append(
+        "SECRETS: this project's credentials (API keys, passwords, tokens, .env values) live in the Evidence vault, not in files or chat. "
+        "Never print, log or paste a secret value. To use them, run the command through "
+        "`python3 evidence_install.py run --target . -- <command>` (installer: " + origin + "/install.py); it injects every secret you may read "
+        "as environment variables without showing them. The `vault_list` MCP tool shows which names exist; use `vault_get` only when a command "
+        "cannot take environment variables, and never echo its result. Missing a secret? Ask the owner to share it with this project."
+    )
     return "\n".join(lines)
 
 
