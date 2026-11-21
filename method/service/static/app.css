@@ -362,3 +362,7 @@ details > summary { min-height: 2.75rem; display: flex; align-items: center; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 label > input[type="checkbox"] { flex: none; min-width: 1.5rem; min-height: 1.5rem; }
+
+/* keyboard: one consistent, high-contrast focus ring on every control */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 3px solid #a5b4fc !important; outline-offset: 2px !important; box-shadow: none; }
+.skip:focus-visible { outline-color: #010727 !important; }
