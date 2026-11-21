@@ -236,6 +236,7 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
         note = f"<p class='err' role='alert'>{e(problem)}</p>" if problem else ""
         body = ("<main class='login'><article>"
                 f"<img src='/ui/static/logo.png?v={ASSET_V}' alt='Evidence' width='260'>"
+                f"<p class='tagline'>Shared protocols and secrets for your AI agents.</p>"
                 f"<a role='button' class='google' href='/ui/login/google'>{GOOGLE_G}<span>Sign in with Google</span></a>"
                 f"{note}</article></main>")
         return page("Sign in", body, bare=True)
@@ -341,7 +342,7 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
             pills = "".join(f"<span class='badge proj'>{e(s)}</span>" for s in it["projects"])
             if it["users"]:
                 pills += f"<span class='badge'>{it['users']} {'person' if it['users'] == 1 else 'people'}</span>"
-            shared = pills or "<span class='muted'>private</span>"
+            shared = pills or "<span class='badge'>private</span>"
             manage = (f"<a role='button' class='outline secondary compact' href='/ui/secret?name={e(urllib.parse.quote(it['name']))}'>Manage</a>"
                       if it["mine"] or sess["admin"] else "")
             desc = f"<p class='desc'>{e(it['description'])}</p>" if it["description"] else ""
@@ -520,8 +521,8 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                 + f"<article><header>Your Evidence secrets</header>{table}</article>"
                 + f"<article><header>Add a project to Evidence "
                   f"<button type='button' class='compact' data-copy='agent-prompt'>Copy prompt</button></header>"
-                  f"<p class='muted'>1. In a terminal, in the repository, run <code>export EVIDENCE_TOKEN=&lt;your Evidence secret&gt;</code>. "
-                  f"2. Start your AI agent there and paste this prompt. The secret itself is never part of the prompt.</p>"
+                  f"<ol class='steps'><li>In a terminal, in the repository, run <code>export EVIDENCE_TOKEN=&lt;your Evidence secret&gt;</code>.</li>"
+                  f"<li>Start your AI agent there and paste this prompt. The secret itself is never part of the prompt.</li></ol>"
                   f"<pre id='agent-prompt' class='prompt'>{e(agent_prompt(origin))}</pre></article>"
                 + f"<article><header>How to use it</header>{how}</article>")
         return page("Evidence secret", body, csrf, admin=sess["admin"])
@@ -562,7 +563,9 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                 f"{form_html('/ui/tokens/revoke', csrf, {'id': t['id']}, 'Revoke', confirm='Revoke this Evidence secret?', cls='danger')}</div>"
                 for t in tokens) or "<span class='muted'>none</span>"
             status = "<span class='badge off'>disabled</span>" if u["disabled"] else "<span class='badge ok'>active</span>"
-            rows += (f"<tr><td>{mail(u['email'])}<br><small class='muted'>{e(u['display_name'] or '')}</small></td><td>{status}</td>"
+            who = u['email'] or u['subject']
+            rows += (f"<tr><td><div class='usercell'><span class='avatar' aria-hidden='true'>{e(who[:1].upper())}</span>"
+                     f"<div>{mail(who)}<br><small class='muted'>{e(u['display_name'] or '')}</small></div></div></td><td>{status}</td>"
                      f"<td>{tok_html}{form_html('/ui/users/token', csrf, {'subject': sub}, 'New', )}</td><td class='row-actions'>"
                      f"{form_html('/ui/users/toggle', csrf, {'subject': sub, 'disabled': '0' if u['disabled'] else '1'}, 'Enable' if u['disabled'] else 'Disable', cls='outline')}"
                      f"{form_html('/ui/users/delete', csrf, {'subject': sub}, 'Delete', confirm='Delete this user? This cannot be undone.', cls='danger')}</td></tr>")
@@ -855,7 +858,7 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                       if srows else "<p class='muted'>Nothing is shared with this project yet.</p>")
             audit = "".join(
                 f"<tr><td>{e(a['created_at'][:19].replace('T', ' '))}</td><td>{e(a['event_type'])}</td>"
-                f"<td><small class='muted'>{e(json.dumps(a['details']))}</small></td></tr>" for a in store.list_audit(slug, sess["sub"], 30, True))
+                f"<td><small class='muted'>{e(json.dumps(a['details'])) if a['details'] else ''}</small></td></tr>" for a in store.list_audit(slug, sess["sub"], 30, True))
             body = (f"<p><a href='/ui/projects'>&larr; Projects</a></p>" + head(slug, f"<a role='button' href='/ui/protocol?slug={e(urllib.parse.quote(slug))}'>Protocol</a>")
                     + f"<article><header>Members and secret access</header>{add_member}"
                       f"<table class='striped'><tr><th>Member</th><th>Protocol</th><th>Categories they can read</th><th></th></tr>{mrows}</table></article>"
