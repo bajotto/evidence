@@ -321,3 +321,8 @@ td code { white-space: nowrap; }
   article > :not(header) { margin-left: 1rem; margin-right: 1rem; }
   article > table, article > .table-wrap { margin-left: 0; margin-right: 0; }
 }
+
+/* round 3: a checkbox grid plus Save inside a card keeps the card inset */
+article > form.inline { display: block; margin-left: 1.25rem; margin-right: 1.25rem; }
+article > form.inline > .checks { margin-bottom: .8rem; }
+article > form.inline > button { margin: 0; }

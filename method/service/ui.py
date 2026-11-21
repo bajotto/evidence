@@ -838,20 +838,22 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                 boxes = "".join(
                     f"<label><input type='checkbox' name='cat' value='{e(c['name'])}'"
                     f"{' checked' if c['name'] in granted.get(m['subject'], set()) else ''}> {e(c['name'])}</label>" for c in cats)
-                owner = "<span class='badge ok'>owner: all categories</span>" if m["role"] == "owner" else ""
+                access = ("<span class='badge ok'>reads everything shared with the project</span>" if m["role"] == "owner" else
+                          form_html('/ui/project/grants', csrf, {'slug': slug, 'subject': m['subject']}, 'Save', extra=boxes))
                 mrows += (f"<tr><td>{mail(m['email'] or m['subject'])}<br><small class='muted'>{e(m['role'])}</small></td>"
-                          f"<td>{sync_badge(sync[m['subject']])}</td><td>"
-                          f"{form_html('/ui/project/grants', csrf, {'slug': slug, 'subject': m['subject']}, 'Save', extra=boxes)}{owner}</td><td>"
+                          f"<td>{sync_badge(sync[m['subject']])}</td><td>{access}</td><td>"
                           f"{form_html('/ui/project/member/remove', csrf, {'slug': slug, 'subject': m['subject']}, 'Remove', confirm='Remove this member?', cls='danger')}</td></tr>")
             roles = "<select name='role'><option>editor</option><option>reader</option><option>owner</option></select>"
             users = "".join(f"<option value='{e(u['subject'])}'>{mail(u['email'] or u['subject'])}</option>" for u in store.list_users(True))
             add_member = ("<details class='create'><summary role='button'>+ Add member</summary>"
                           + form_html("/ui/project/member", csrf, {"slug": slug}, "Add member", False, f"<select name='subject'>{users}</select> {roles}")
                           + "</details>")
+            via = {(c['category'], c['owner']) for c in store.project_category_shares(slug)}
             srows = "".join(
                 f"<tr><td>{e(s['name'])}<br><small class='muted'>{e(s['description'])}</small></td><td><span class='badge cat'>{e(s['category'])}</span></td>"
                 f"<td>{mail(s['owner'])}</td><td class='row-actions'>"
-                f"{form_html('/ui/project/vault/unshare', csrf, {'slug': slug, 'name': s['name']}, 'Unshare', confirm='Stop sharing this secret with the project?', cls='outline')}"
+                + ("<span class='badge'>via category</span>" if (s['category'], s['owner']) in via else
+                   form_html('/ui/project/vault/unshare', csrf, {'slug': slug, 'name': s['name']}, 'Unshare', confirm='Stop sharing this secret with the project?', cls='outline')) +
                 f"{form_html('/ui/project/vault/delete', csrf, {'slug': slug, 'name': s['name']}, 'Delete', confirm='Delete this secret for everyone?', cls='danger')}</td></tr>"
                 for s in store.vault_list(sess["sub"], True, slug, include_unreadable=True))
             stable = (f"<table class='striped'><tr><th>Secret</th><th>Category</th><th>Owner</th><th></th></tr>{srows}</table>"
@@ -860,10 +862,9 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
             mine = {c["category"] for c in cshares if c["owner_subject"] == sess["sub"]}
             cboxes = "".join(f"<label><input type='checkbox' name='cat' value='{e(c['name'])}'{' checked' if c['name'] in mine else ''}> {e(c['name'])}</label>" for c in cats)
             crows = "".join(f"<span class='badge cat'>{e(c['category'])}</span> <small class='muted'>from {e(c['owner'])}</small> " for c in cshares)
-            catbox = ("<article><header>Share credentials by category</header>"
-                      "<p class='muted'>Tick a category and this project gets <strong>all your credentials in it</strong>, including ones you add later. "
-                      "Owners read them directly; other members still need the category under Members above.</p>"
-                      + form_html("/ui/project/vault/categories", csrf, {"slug": slug}, "Save", False, f"<div class='checks'>{cboxes}</div>")
+            catbox = ("<article><header>What this project can read</header>"
+                      "<p class='muted'>Tick a category and this project gets <strong>all your credentials in it</strong>, including ones you add later.</p>"
+                      + form_html("/ui/project/vault/categories", csrf, {"slug": slug}, "Save", True, f"<div class='checks'>{cboxes}</div>")
                       + (f"<p>{crows}</p>" if crows else "") + "</article>")
             loose = [s for s in store.vault_list(sess["sub"], True, None, include_unreadable=True) if slug not in s["projects"]]
             if loose:
@@ -876,13 +877,13 @@ def register_ui(app, store: Store, public_url: str, google_client_id: str, googl
                 f"<tr><td>{e(a['created_at'][:19].replace('T', ' '))}</td><td>{e(a['event_type'])}</td>"
                 f"<td><small class='muted'>{e(json.dumps(a['details'])) if a['details'] else ''}</small></td></tr>" for a in store.list_audit(slug, sess["sub"], 30, True))
             body = (f"<p><a href='/ui/projects'>&larr; Projects</a></p>" + head(slug, f"<a role='button' href='/ui/protocol?slug={e(urllib.parse.quote(slug))}'>Protocol</a>")
-                    + f"<article><header>Members and secret access</header>"
-                      "<p class='muted'>Categories only limit what non-owner members may read. They do not give the project any secret: "
-                      "share secrets with it in the next section.</p>" + add_member
-                    + f"<table class='striped'><tr><th>Member</th><th>Protocol</th><th>Categories they can read</th><th></th></tr>{mrows}</table></article>"
                     + catbox
-                    + f"<article><header>Secrets shared with this project "
+                    + f"<article><header>Secrets this project reads "
                       f"<a role='button' class='compact' href='/ui/secret/new?project={e(urllib.parse.quote(slug))}'>+ New secret</a></header>{stable}</article>"
+                    + f"<article><header>Members and secret access</header>"
+                      "<p class='muted'>Owners read everything shared with the project. Editors and readers read only the categories ticked below. "
+                      "What the project holds is set in the sections above.</p>" + add_member
+                    + f"<table class='striped'><tr><th>Member</th><th>Protocol</th><th>Secrets they can read (by category)</th><th></th></tr>{mrows}</table></article>"
                     + f"<article><header>Activity</header><table class='striped'><tr><th>When</th><th>Event</th><th>Details</th></tr>{audit}</table></article>")
             return page(slug, body, csrf, admin=True)
         return render
