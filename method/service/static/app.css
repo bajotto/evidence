@@ -370,3 +370,10 @@ label > input[type="checkbox"] { flex: none; min-width: 1.5rem; min-height: 1.5r
 /* Smaller, calmer scale: Pico grows the root size up to 131% on wide screens; pin it to 87.5% (14px). */
 :root, html { --pico-font-size: 87.5%; }
 @media (min-width: 576px), (min-width: 768px), (min-width: 1024px), (min-width: 1280px), (min-width: 1536px) { :root, html { --pico-font-size: 87.5%; } }
+
+/* nav: breathing room between link pills, logo no longer hugging the edge */
+header.app .links { gap: .4rem; }
+header.app .links li { padding: 0; margin: 0; }
+header.app .links a { padding: .4rem 1rem; }
+header.app nav.container { padding-left: 1.5rem; padding-right: 1.5rem; }
+header.app nav ul:first-of-type, header.app nav ul:last-of-type { margin-left: 0; margin-right: 0; }
