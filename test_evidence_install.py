@@ -192,6 +192,22 @@ class InstallerTests(unittest.TestCase):
                 project_config(Path(temp), "claude", "https://evidence.example/mcp", "demo-project", True, "bad name")
 
 
+    def test_join_dry_run_never_contacts_the_service(self):
+        with tempfile.TemporaryDirectory() as temp:
+            subprocess.run(["git", "-C", temp, "init", "-q"], check=True)
+            subprocess.run(["git", "-C", temp, "remote", "add", "origin", "https://git.example.com/acme/demo.git"], check=True)
+            base = ["python3", "evidence_install.py", "join", "--target", temp, "--agent", "claude",
+                    "--service-url", "http://127.0.0.1:1/mcp"]  # nothing listens on port 1
+            env = {k: v for k, v in os.environ.items() if k != "EVIDENCE_TOKEN"}
+            dry = subprocess.run(base + ["--dry-run"], capture_output=True, text=True, timeout=30, env=env)
+            self.assertEqual(dry.returncode, 0, dry.stderr)  # no token set and no server: it must still preview
+            self.assertIn("NOT contacted", dry.stdout)
+            self.assertIn("Dry run only; no files were written.", dry.stdout)
+            self.assertEqual([p.name for p in Path(temp).iterdir()], [".git"])
+            real = subprocess.run(base, capture_output=True, text=True, timeout=30, env={**env, "EVIDENCE_TOKEN": "evk_test"})
+            self.assertNotEqual(real.returncode, 0)  # the real run does contact the service
+            self.assertIn("cannot reach service", real.stderr)
+
     def test_service_calls_identify_the_installer_instead_of_the_default_python_user_agent(self):
         import io
         import evidence_install
