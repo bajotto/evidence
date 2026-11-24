@@ -86,6 +86,7 @@ The hook injects a pointer, not the database contents. The agent still must call
 - `protocol_get`, `protocol_header`, and `protocol_search` read the current database revision.
 - `protocol_update` requires an `expected_revision`, checks project role, normalizes the generated header, and creates the next revision and audit record in one transaction. Stale writes conflict instead of overwriting another editor.
 - `protocol_approve_phase` records an approval against an exact revision.
+- `protocol_set_phase_gate` (owner) turns the approval into a rule: with the gate on, `protocol_update` refuses to advance a phase without a current owner approval of the previous one.
 - `protocol_identity`, `protocol_projects_list`, `protocol_add_member`, `protocol_remove_member`, `protocol_members_list`, and `protocol_audit_history` support identity, access, and audit workflows.
 - Header/search reuse the existing scripts against a temporary copy. No local project path is accepted by the remote tools.
 

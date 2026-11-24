@@ -112,3 +112,7 @@ measurable improvement over that. Treating Layer 2 as sufficient repeats the
 same category error one level up: mistaking "the rule was delivered" for
 "the rule was followed." Only Layer 3, and an honest audit of what actually
 happened, can tell those two apart.
+
+## One place where this repository enforces its own method
+
+The pilot-then-approve gate is Layer 1 and 2 text by default. In the central service it can be made Layer 3: with a project's phase gate on (`protocol_set_phase_gate`), the service rejects a protocol revision that advances a phase without a current owner approval of the previous one, regardless of who wrote the revision or what they read. It guarantees the approval exists, not that the evidence behind it is true; that still needs the audit described above.

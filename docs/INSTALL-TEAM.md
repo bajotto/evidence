@@ -342,11 +342,20 @@ Who can read a secret: its owner; users it was shared with directly; and members
 | `/api/vault/env` | bearer key | secrets as env for `run` |
 | `/install.py` | none | serves `evidence_install.py`, so a fresh machine can `curl -fsS https://<host>/install.py -o evidence_install.py` instead of cloning |
 
-**MCP tools:** `protocol_get`, `protocol_header`, `protocol_search`, `protocol_update` (needs `expected_revision`; a stale write is rejected, re-read and retry), `protocol_approve_phase`, `protocol_create_project`, `protocol_join`, `protocol_identity`, `protocol_projects_list`, `protocol_add_member`, `protocol_remove_member`, `protocol_members_list`, `protocol_audit_history`, `protocol_revision_history`, `protocol_sync_status`. Vault tools: `vault_list`, `vault_get`, `vault_put`, `vault_share`, `vault_delete`, `vault_categories`, `vault_set_member_categories`. Roles: `owner`, `editor`, `reader`; the last owner cannot be removed.
+**MCP tools:** `protocol_get`, `protocol_header`, `protocol_search`, `protocol_update` (needs `expected_revision`; a stale write is rejected, re-read and retry), `protocol_approve_phase`, `protocol_set_phase_gate` (owner), `protocol_create_project`, `protocol_join`, `protocol_identity`, `protocol_projects_list`, `protocol_add_member`, `protocol_remove_member`, `protocol_members_list`, `protocol_audit_history`, `protocol_revision_history`, `protocol_sync_status`. Vault tools: `vault_list`, `vault_get`, `vault_put`, `vault_share`, `vault_delete`, `vault_categories`, `vault_set_member_categories`. Roles: `owner`, `editor`, `reader`; the last owner cannot be removed.
 
 **Hook tuning (client side):** `EVIDENCE_HOOK_CACHE_TTL` (default 60 s) and `EVIDENCE_HOOK_TIMEOUT` (default 3 s). Offline, the hook shows the last copy marked stale.
 
 **Optional Keycloak overlay.** Lets MCP clients use OAuth instead of a personal key: `docker compose -f compose.yaml -f compose.keycloak.yaml up -d --build`, set the `KC_*`, `KEYCLOAK_*` and `OIDC_PUBLIC_URL` variables, then create the `evidence` realm, configure Google as its identity provider, and set the `evidence:access` / `evidence:admin` scopes and the `evidence-mcp` audience. The realm is not auto-provisioned. Follow [`../method/service/README.md`](../method/service/README.md); live OAuth against each agent is not yet verified, which is why personal keys are the supported path here.
+
+### Phase gate (optional, per project)
+
+By default a phase in the protocol is only text. An owner can make it a rule: `protocol_set_phase_gate(project_slug, true)`. While the gate is on, `protocol_update` (and the web editor) refuse a revision when:
+
+- it moves to the next phase and the latest decision for the current phase is not an approval, or that approval predates the revision that entered the phase;
+- it skips a phase, or removes the declared phase.
+
+Moving back to an earlier phase is allowed and recorded as `phase.regressed`. Only owners can approve while the gate is on, so an editor cannot approve their own advance. The phase is read from the protocol the same way the header does (the **Status:** paragraph, else the last `### Phase N` heading). Turning the gate on records the current phase as the starting point; turning it off is audited. This proves a human approved the phase, not that the pilot results were true. See [`../method/ENFORCEMENT_MODEL.md`](../method/ENFORCEMENT_MODEL.md).
 
 ## Upgrade
 
