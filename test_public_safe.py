@@ -22,13 +22,14 @@ class PublicSafeTests(unittest.TestCase):
         samples = {
             "private IP": "host 192.168.7.9", "ssh": "run ssh deploy@box", "key": "-----BEGIN OPENSSH PRIVATE KEY-----",
             "notes": "see access.md", "hostname": "on srv07", "env cred": "DB_PASSWORD=Sup3rS3cretValue",
-            "token": "ghp_" + "a" * 36,
+            "token": "ghp_" + "a" * 36, "home": "see /home/alice/project/x",
         }
         for label, text in samples.items():
             hits = public_safe.scan("f", text)
             self.assertTrue(hits, label)
             self.assertNotIn(text, " ".join(hits))
-        for ok in ("host 192.168.50.10", "PGPASSWORD=", "KEY_PASSWORD=<set-me>", "TOKEN=${EVIDENCE_TOKEN}"):
+        for ok in ("host 192.168.50.10", "PGPASSWORD=", "KEY_PASSWORD=<set-me>", "TOKEN=${EVIDENCE_TOKEN}", "/home/user/x",
+                   "<!-- PROTOCOL-HEADER:START -->\n/home/alice/.claude\n<!-- PROTOCOL-HEADER:END -->"):
             self.assertEqual(public_safe.scan("f", ok), [], ok)
 
     def test_hooks_block_staged_content_message_and_push(self):

@@ -13,3 +13,7 @@ method/service/STAGING-COOLIFY.md
 private/
 /access.md
 .public-safe-deny
+
+# Generated per machine by sync-windsurf-rules.sh; they embed local absolute paths.
+/.traerules
+/.windsurf/rules/evidence.md
