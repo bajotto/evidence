@@ -22,6 +22,7 @@ PATTERNS = {
         r"\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.(?!50\.)\d{1,3}\.\d{1,3})\b"),
     "ssh user@host": re.compile(r"\bssh\s+[a-z_][\w-]*@\S+", re.I),
     "private key": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    "home directory path (use /home/user)": re.compile(r"/home/(?!user/)[a-z_][\w.-]*/"),
     "private notes file": re.compile(r"access\.md"),
     "internal hostname": re.compile(r"\bsrv\d{2}\b"),
     "env-style credential": re.compile(r"^\s*[A-Z][A-Z0-9_]*(?:PASSWORD|SECRET|TOKEN|API_KEY)[ \t]*=[ \t]*(?!(?i:replace|change|example|your|placeholder|dummy|test))[^\s#<$'\"{][^\s]{7,}", re.M),
@@ -43,7 +44,12 @@ def rules() -> list[tuple[str, re.Pattern]]:
     return [*PATTERNS.items(), *extra]
 
 
+# The hook regenerates this block with the local machine's paths, so it is not judged.
+HEADER = re.compile(r"<!-- PROTOCOL-HEADER:START -->.*?<!-- PROTOCOL-HEADER:END -->", re.S)
+
+
 def scan(label: str, text: str) -> list[str]:
+    text = HEADER.sub("", text)
     return [f"{label}: {name}" for name, pattern in rules() if pattern.search(text)]
 
 
