@@ -22,6 +22,10 @@ class RevisionConflict(Exception):
         super().__init__(f"stale protocol revision; current revision is {current_revision}")
 
 
+class PhaseGateBlocked(ValueError):
+    """The project's phase gate refused a protocol revision (subclasses ValueError so the UI shows it)."""
+
+
 class ProjectNotFound(Exception):
     pass
 
@@ -156,6 +160,7 @@ class Store:
             if current["revision"] != expected_revision:
                 raise RevisionConflict(current["revision"])
             revision = expected_revision + 1
+            self._enforce_phase_gate(conn, project["id"], content, revision, actor)
             conn.execute(
                 "UPDATE protocols SET content = %s, revision = %s, updated_by = %s, updated_at = now() "
                 "WHERE project_id = %s",
@@ -172,6 +177,74 @@ class Store:
                 (project["id"], actor, revision, Jsonb({"summary": summary.strip()})),
             )
         return {"project_slug": slug, "revision": revision}
+
+    def _enforce_phase_gate(self, conn, project_id, content: str, revision: int, actor: str) -> None:
+        """Called inside update_protocol's transaction, after the protocols row is locked.
+        Phase moves: same phase passes, +1 needs the latest decision for the current phase to be an approval
+        recorded at or after the revision that entered it, a jump is refused, a regression is allowed and audited."""
+        gate = conn.execute(
+            "SELECT phase_gate, gate_phase, gate_phase_revision FROM projects WHERE id = %s FOR UPDATE",
+            (project_id,),
+        ).fetchone()
+        if not gate["phase_gate"]:
+            return
+        new, current = declared_phase(content), gate["gate_phase"]
+        if new is None:
+            raise PhaseGateBlocked("phase gate is on: the protocol must declare its current phase")
+        if new > current + 1:
+            raise PhaseGateBlocked(f"phase gate: cannot jump from phase {current} to phase {new}")
+        if new == current:
+            return
+        if new == current + 1:
+            last = conn.execute(
+                "SELECT approved, protocol_revision FROM protocol_approvals "
+                "WHERE project_id = %s AND phase_number = %s ORDER BY id DESC LIMIT 1",
+                (project_id, current),
+            ).fetchone()
+            if last is None or not last["approved"] or last["protocol_revision"] < gate["gate_phase_revision"]:
+                raise PhaseGateBlocked(
+                    f"phase gate: phase {current} has no current approval; an owner must approve it "
+                    f"(protocol_approve_phase) before the protocol moves to phase {new}")
+        conn.execute("UPDATE projects SET gate_phase = %s, gate_phase_revision = %s WHERE id = %s",
+                     (new, revision, project_id))
+        conn.execute(
+            "INSERT INTO audit_events (project_id, actor_subject, event_type, revision, details) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            (project_id, actor, "phase.advanced" if new > current else "phase.regressed", revision,
+             Jsonb({"from": current, "to": new})),
+        )
+
+    def set_phase_gate(self, slug: str, enabled: bool, actor: str) -> dict:
+        with self.connect() as conn:
+            project = conn.execute(
+                "SELECT p.id, m.role FROM projects p "
+                "LEFT JOIN project_memberships m ON m.project_id = p.id AND m.subject = %s "
+                "WHERE p.slug = %s",
+                (actor, slug),
+            ).fetchone()
+            if project is None:
+                raise ProjectNotFound("project not found")
+            if project["role"] != "owner":
+                raise AccessDenied("only a project owner can change the phase gate")
+            protocol = conn.execute(  # same lock order as update_protocol: protocols first, then projects
+                "SELECT content, revision FROM protocols WHERE project_id = %s FOR UPDATE", (project["id"],)
+            ).fetchone()
+            conn.execute("SELECT 1 FROM projects WHERE id = %s FOR UPDATE", (project["id"],))
+            phase = None
+            if enabled:
+                phase = declared_phase(protocol["content"])
+                if phase is None:
+                    raise PhaseGateBlocked("cannot enable the phase gate: the protocol does not declare a current phase")
+            conn.execute(
+                "UPDATE projects SET phase_gate = %s, gate_phase = %s, gate_phase_revision = %s WHERE id = %s",
+                (enabled, phase, protocol["revision"] if enabled else None, project["id"]),
+            )
+            conn.execute(
+                "INSERT INTO audit_events (project_id, actor_subject, event_type, revision, details) "
+                "VALUES (%s, %s, 'phase_gate.changed', %s, %s)",
+                (project["id"], actor, protocol["revision"], Jsonb({"enabled": enabled, "phase": phase})),
+            )
+        return {"project_slug": slug, "phase_gate": enabled, "phase": phase, "revision": protocol["revision"]}
 
     def record_approval(
         self,
@@ -193,7 +266,8 @@ class Store:
             ).fetchone()
             if project is None:
                 raise ProjectNotFound("project not found")
-            if project["role"] not in {"owner", "editor"}:
+            gated = conn.execute("SELECT phase_gate FROM projects WHERE id = %s", (project["id"],)).fetchone()["phase_gate"]
+            if project["role"] not in ({"owner"} if gated else {"owner", "editor"}):
                 raise AccessDenied("project approval access denied")
             protocol = conn.execute(
                 "SELECT revision FROM protocols WHERE project_id = %s FOR UPDATE",
@@ -990,6 +1064,23 @@ def slug_from_join_key(join_key: str, suffix: bool = False) -> str:
     if suffix:
         base = f"{base[:56]}-{hashlib.sha256(join_key.encode()).hexdigest()[:6]}"
     return base if len(base) >= 3 else base + "-prj"
+
+
+_HEADER_BLOCK = re.compile(r"<!-- PROTOCOL-HEADER:START -->.*?<!-- PROTOCOL-HEADER:END -->", re.S)
+
+
+def declared_phase(content: str) -> int | None:
+    """The phase a protocol declares, derived exactly as method/protocol-header.sh does: the highest
+    'Phase N' in the body's **Status:** paragraph, else the last '### Phase N' heading."""
+    text = _HEADER_BLOCK.sub("", content)
+    match = re.search(r"^\*\*(?:Status|Estado):?[ \t]*(.*)$", text, re.M | re.I)
+    if match:
+        continuation = re.split(r"\n\s*\n|\n\*\*[^\n]+", text[match.end():], maxsplit=1)[0]
+        nums = re.findall(r"\b(?:Phase|Fase)\s+(\d+)", match.group(1) + " " + continuation, re.I)
+        if nums:
+            return max(map(int, nums))
+    heads = re.findall(r"^###\s+Phase\s+(\d+)", text, re.M | re.I)
+    return int(heads[-1]) if heads else None
 
 
 def validate_protocol(content: str) -> None:

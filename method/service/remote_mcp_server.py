@@ -351,6 +351,13 @@ def create_server(store: Store | None = None, token_verifier: TokenVerifier | No
         )
 
     @app.tool()
+    def protocol_set_phase_gate(project_slug: str, enabled: bool) -> dict:
+        """Owner only. When enabled, protocol_update refuses to move the protocol to the next phase until an
+        owner has approved the current one (protocol_approve_phase), refuses phase jumps, and audits regressions."""
+        subject, _, _ = _identity()
+        return store.set_phase_gate(project_slug, enabled, subject)
+
+    @app.tool()
     def vault_categories() -> list[dict]:
         """List secret categories that can be granted to project members."""
         _identity()

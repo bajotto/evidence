@@ -4,7 +4,7 @@ import os
 import unittest
 import uuid
 
-from method.service.store import AccessDenied, RevisionConflict, Store
+from method.service.store import AccessDenied, PhaseGateBlocked, RevisionConflict, Store, declared_phase
 
 CONNINFO = os.environ.get("EVIDENCE_TEST_CONNINFO")
 
@@ -69,6 +69,101 @@ class StoreIntegrationTests(unittest.TestCase):
     def test_cannot_remove_last_owner(self):
         with self.assertRaisesRegex(ValueError, "last project owner"):
             self.store.remove_member(self.slugs[0], self.subjects[0], self.subjects[0])
+
+    def _doc(self, phase: int) -> str:
+        return f"# Gate project\n\n**Status:** Phase {phase} in progress\n\n### Phase {phase}\nbody\n"
+
+    def _gated(self, phase: int = 1):
+        """Project 1 with the gate on at `phase`; returns (slug, owner, current revision)."""
+        slug, owner = self.slugs[1], self.subjects[1]
+        rev = self.store.update_protocol(slug, self._doc(phase), 1, owner, "declare phase")["revision"]
+        self.store.set_phase_gate(slug, True, owner)
+        return slug, owner, rev
+
+    def test_gate_is_off_by_default(self):
+        slug, owner = self.slugs[1], self.subjects[1]
+        rev = self.store.update_protocol(slug, self._doc(1), 1, owner, "p1")["revision"]
+        self.store.update_protocol(slug, self._doc(4), rev, owner, "jump freely")
+
+    def test_advance_needs_current_owner_approval(self):
+        slug, owner, rev = self._gated(1)
+        with self.assertRaisesRegex(PhaseGateBlocked, "no current approval"):
+            self.store.update_protocol(slug, self._doc(2), rev, owner, "advance")
+        self.store.record_approval(slug, 1, rev, True, "pilot ok", owner)
+        rev = self.store.update_protocol(slug, self._doc(2), rev, owner, "advance")["revision"]
+        events = [e["event_type"] for e in self.store.list_audit(slug, owner)]
+        self.assertIn("phase.advanced", events)
+        with self.assertRaises(PhaseGateBlocked):  # phase 2 itself is not approved yet
+            self.store.update_protocol(slug, self._doc(3), rev, owner, "advance again")
+
+    def test_later_rejection_revokes_approval(self):
+        slug, owner, rev = self._gated(1)
+        self.store.record_approval(slug, 1, rev, True, "ok", owner)
+        self.store.record_approval(slug, 1, rev, False, "withdrawn", owner)
+        with self.assertRaises(PhaseGateBlocked):
+            self.store.update_protocol(slug, self._doc(2), rev, owner, "advance")
+
+    def test_approval_from_before_entering_the_phase_does_not_count(self):
+        slug, owner, rev = self._gated(2)
+        self.store.record_approval(slug, 2, rev, True, "ok", owner)
+        rev = self.store.update_protocol(slug, self._doc(3), rev, owner, "advance")["revision"]
+        rev = self.store.update_protocol(slug, self._doc(2), rev, owner, "regress")["revision"]  # re-enters phase 2
+        self.assertIn("phase.regressed", [e["event_type"] for e in self.store.list_audit(slug, owner)])
+        with self.assertRaises(PhaseGateBlocked):  # the old approval predates re-entering phase 2
+            self.store.update_protocol(slug, self._doc(3), rev, owner, "advance")
+
+    def test_jump_and_missing_phase_are_refused(self):
+        slug, owner, rev = self._gated(1)
+        self.store.record_approval(slug, 1, rev, True, "ok", owner)
+        with self.assertRaisesRegex(PhaseGateBlocked, "cannot jump"):
+            self.store.update_protocol(slug, self._doc(3), rev, owner, "jump")
+        with self.assertRaisesRegex(PhaseGateBlocked, "must declare"):
+            self.store.update_protocol(slug, "# no phase here\n", rev, owner, "drop phase")
+
+    def test_only_owner_approves_and_toggles_when_gated(self):
+        slug = self.slugs[0]
+        owner = self.subjects[0]
+        rev = self.store.update_protocol(slug, self._doc(1), 1, owner, "p1")["revision"]
+        with self.assertRaises(AccessDenied):
+            self.store.set_phase_gate(slug, True, self.editor)
+        self.store.set_phase_gate(slug, True, owner)
+        with self.assertRaises(AccessDenied):
+            self.store.record_approval(slug, 1, rev, True, "self-approve", self.editor)
+        self.store.record_approval(slug, 1, rev, True, "ok", owner)
+        self.store.set_phase_gate(slug, False, owner)
+        self.store.record_approval(slug, 1, rev, True, "editor ok when gate off", self.editor)
+
+    def test_enabling_requires_a_declared_phase(self):
+        with self.assertRaisesRegex(PhaseGateBlocked, "does not declare"):
+            self.store.set_phase_gate(self.slugs[1], True, self.subjects[1])
+
+    def test_concurrent_advances_cannot_both_pass_the_gate(self):
+        import threading
+        slug, owner, rev = self._gated(1)
+        self.store.record_approval(slug, 1, rev, True, "ok", owner)
+        results = []
+
+        def advance(target):
+            try:
+                results.append(self.store.update_protocol(slug, self._doc(target), rev, owner, f"to {target}")["revision"])
+            except (RevisionConflict, PhaseGateBlocked) as exc:
+                results.append(exc)
+
+        threads = [threading.Thread(target=advance, args=(n,)) for n in (2, 2, 3)]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
+        self.assertEqual(sum(isinstance(r, int) for r in results), 1)
+        self.assertEqual(declared_phase(self.store.get_protocol(slug, owner)["content"]), 2)  # the jump to 3 never landed
+
+
+class DeclaredPhaseTests(unittest.TestCase):
+    def test_matches_the_header_script_rules(self):
+        self.assertEqual(declared_phase("**Status:** Phase 2 (Pilot) now\n\n### Phase 1\n### Phase 3"), 2)
+        self.assertEqual(declared_phase("### Phase 1\n### Phase 2"), 2)
+        self.assertEqual(declared_phase("**Estado:** Fase 3\n"), 3)
+        self.assertIsNone(declared_phase("nothing"))
+        wrapped = "<!-- PROTOCOL-HEADER:START -->\n**Status:** Phase 9\n<!-- PROTOCOL-HEADER:END -->\n### Phase 1"
+        self.assertEqual(declared_phase(wrapped), 1)  # the generated header block is never the source
 
 
 if __name__ == "__main__":
