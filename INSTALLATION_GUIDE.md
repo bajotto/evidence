@@ -2,6 +2,21 @@
 
 Evidence has two deployment models. Pick one, then open its guide.
 
+## How to read this repository
+
+This repository is the **reference code**, not an installation. It holds the method, the hooks, the installers, the templates and the service source. It never holds a client's data. Every implementation is a separate **instance** built from it and run on the client's own machine or infrastructure:
+
+| | Comes from this repository | Created and kept by the client |
+|---|---|---|
+| Standalone | method docs, hooks, installers, templates | hooks and rules copied into the agent's home (`~/.claude`, `~/.devin`, ...), plus each project's `EVIDENCE_PROTOCOL.md` |
+| Team | all of the above, plus the service source in `method/service/` | the running service, its PostgreSQL database (revisions, approvals, audit, vault, members) and each member's local connection |
+
+What follows from this:
+
+- **Keep the checkout.** Installers copy from it, and some adapters point at scripts inside it. To update an instance, `git pull` and re-run the installers; for Team, also rebuild and redeploy the service.
+- **An instance can drift from the repository.** An installer that finds a different copy of a method doc warns and does not overwrite it. Diff it and decide.
+- **Nothing from an instance goes back into the repository.** Protocols, hostnames, keys and paths of a real deployment stay on the client side; a guard blocks them from public commits.
+
 | I want to... | Open |
 |---|---|
 | Use Evidence alone, offline, with no server | [`docs/INSTALL-STANDALONE.md`](docs/INSTALL-STANDALONE.md) |
