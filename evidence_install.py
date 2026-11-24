@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parent
 MARKER_START = "<!-- evidence-central:start -->"
 MARKER_END = "<!-- evidence-central:end -->"
+DRY_RUN_SLUG = "dry-run-preview"
 SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{1,62})[a-z0-9]$")
 
 
@@ -368,19 +369,26 @@ def main() -> int:
             join_key = args.join_key or git_join_key(args.target)
             name = args.name or join_key.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
             reject_standalone_guidance(args.target, args.agent)  # fail before the service is touched, never half-way
-            local = args.target / "EVIDENCE_PROTOCOL.md"
-            protocol = local.read_text(encoding="utf-8") if local.is_file() and local.stat().st_size <= 2_000_000 else None
-            payload = {"join_key": join_key, "name": name}
-            if protocol and protocol.strip():
-                payload["protocol"] = protocol
-            result = call_service(f"{service_origin(service)}/api/join", read_token(args.token_env), payload)
-            print(f"{'Created' if result['created'] else 'Joined'} project {result['project_slug']} as {result['role']}")
-            if result.get("imported_protocol"):
-                print("Imported the local EVIDENCE_PROTOCOL.md as the first revision of the central protocol.")
-            elif protocol and not result["created"]:
-                print("Note: the project already existed, so the local EVIDENCE_PROTOCOL.md was NOT imported. "
-                      "The central copy wins; compare it with the local file in the web UI and update it there if needed.")
-            outputs = project_config(args.target, args.agent, service, result["project_slug"], True, args.token_env)
+            if args.dry_run:
+                # The service must not be contacted (joining creates the project there). The real slug is derived
+                # server-side, so the preview lists the same files under a placeholder slug.
+                print("Dry run: the service is NOT contacted, so nothing is created or joined there. "
+                      f"File contents below use the placeholder slug '{DRY_RUN_SLUG}'; the real slug comes from the service.")
+                outputs = project_config(args.target, args.agent, service, DRY_RUN_SLUG, True, args.token_env)
+            else:
+                local = args.target / "EVIDENCE_PROTOCOL.md"
+                protocol = local.read_text(encoding="utf-8") if local.is_file() and local.stat().st_size <= 2_000_000 else None
+                payload = {"join_key": join_key, "name": name}
+                if protocol and protocol.strip():
+                    payload["protocol"] = protocol
+                result = call_service(f"{service_origin(service)}/api/join", read_token(args.token_env), payload)
+                print(f"{'Created' if result['created'] else 'Joined'} project {result['project_slug']} as {result['role']}")
+                if result.get("imported_protocol"):
+                    print("Imported the local EVIDENCE_PROTOCOL.md as the first revision of the central protocol.")
+                elif protocol and not result["created"]:
+                    print("Note: the project already existed, so the local EVIDENCE_PROTOCOL.md was NOT imported. "
+                          "The central copy wins; compare it with the local file in the web UI and update it there if needed.")
+                outputs = project_config(args.target, args.agent, service, result["project_slug"], True, args.token_env)
         elif args.mode == "run":
             command = args.command[1:] if args.command[:1] == ["--"] else args.command
             return run_with_secrets(args.target, command, args.token_env)
